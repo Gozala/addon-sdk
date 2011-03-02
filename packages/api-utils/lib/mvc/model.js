@@ -148,6 +148,22 @@ const Model = Trait.compose(EventEmitter, Trait({
   }
 }));
 Model.extend = function extend(extension) {
-  return Trait.compose(Model, Trait(extension));
+  return Trait.compose(this, Trait(extension));
 };
 exports.Model = Model;
+
+/**
+var Sidebar = Model.extend({
+  promptColor: function() {
+    var cssColor = prompt("Please enter a CSS color:");
+    this.set({color: cssColor});
+  }
+});
+
+var sidebar = Sidebar.create();
+sidebar.on('change:color', function(event) {
+  $('#sidebar').css({ background: event.value });
+});
+sidebar.set({ color: 'white' });
+sidebar.promptColor();
+*/
