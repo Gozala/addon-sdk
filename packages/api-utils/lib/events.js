@@ -39,6 +39,7 @@
 "use strict";
 
 const { Trait } = require('light-traits');
+const defer = require('utils/function').Enqueued;
 
 const ERROR_TYPE = 'error',
       UNCAUGHT_ERROR = 'An error event was dispatched for which there was'
@@ -189,5 +190,16 @@ const eventEmitter =  {
   }
 };
 
-exports.EventEmitterTrait = require("light-traits").Trait(eventEmitter);
 exports.EventEmitter = require("traits").Trait.compose(eventEmitter);
+exports.EventEmitterTrait = Trait(eventEmitter);
+exports.DeferredEventEmitter = Trait.compose(
+  exports.EventEmitterTrait.resolve({
+    on: null, once: null, removeListener: null, _emit: null
+  }),
+  Trait({
+    on: defer(eventEmitter.on),
+    once: defer(eventEmitter.once),
+    removeListener: defer(eventEmitter.removeListener),
+    _emit: defer(eventEmitter._emit)
+  })
+);
