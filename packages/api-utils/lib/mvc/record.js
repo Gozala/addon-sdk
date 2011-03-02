@@ -44,32 +44,33 @@ var isUndefined = utils.isUndefined;
 var isFunction = utils.isFunction;
 var isNumber = utils.isNumber;
 
-function validate(attributes) {
-  var values = {};
-  Object.keys(attributes).forEach(function(key) {
-    var guard = this.guards[key];
-    if (guard)
-      values[key] = guard.call(this, attributes[key], key);
-    else
-      throw new Error("Record does not defines field '" + key + "'");
-  }, this);
-  return values;
-}
-
-function Record(guards, model) {
-  var Record = Trait.compose(model || Model, Trait({
-    guards: guards,
-    attributes: {},
-    validate: validate
-  }));
-  return function record(attributes) {
-    var record = Record.create();
-    if (attributes)
-      record.set(attributes);
-    return record;
+const Record = Trait.compose(Model, Trait({
+  isRecord: true,
+  fields: Trait.required,
+  validate: function validate(attributes) {
+    var values = {};
+    Object.keys(attributes).forEach(function(key) {
+      var guard = this.fields[key];
+      if (guard) {
+        if (guard.isRecord)
+          values[key] = guard.validate(attributes[key]);
+        else
+          values[key] = guard.call(this, attributes[key], key);
+      }
+      else
+        throw new Error("Record does not defines field '" + key + "'");
+    }, this);
+    return values;
   }
-}
+}));
 exports.Record = Record;
+
+Record.Model = function Model(fields) {
+  return Trait.compose(Record, Trait({
+    attributes: {},
+    fields: fields
+  }));
+};
 
 Record.String = function String(defaultValue) {
   return function stringGuard(value, key) {
@@ -92,3 +93,28 @@ Record.Number = function Number(defaultValue) {
   }
 };
 
+Record.Scheme = function Scheme(fields) {
+  return function structureGuard(attributes, name) {
+    var data;
+
+    Object.keys(fields).forEach(function(key) {
+      (data || (data = {}))[key] = fields[key].call(this, attributes[key], key);
+    }, this);
+
+    return data;
+  };
+};
+
+/*
+
+var Record = require("mvc/record").Record;
+var Point = Record.Scheme({ x: Record.Number(0), y: Record.Number(0) });
+
+var Segment = Record.Model({ start: Point, end: Point, opacity: Record.Number(0) });
+var segment = Segment.create();
+segment.set({
+  start: { x: 0, y: 0 },
+  end: { x: 10, y: 17 },
+  opacity: 29
+})
+*/
