@@ -72,12 +72,15 @@ Record.Model = function Model(fields) {
   }));
 };
 
-Record.String = function String(defaultValue) {
+Record.String = function String(defaultValue, message) {
+  message = message || "Incorrect value `{{value}}` was assigned to the" +
+            "`{{key}}` property which had to be a String";
+  message = message.replace('{{key}}', key);
   return function stringGuard(value, key) {
     if (isUndefined(value))
       value = defaultsValue;
     else if (!isString(value))
-      throw TypeError("Property '" + key + "' expected to be a String instead of: " + value);
+      throw TypeError(message.replace('{{value}}', value));
 
     return value;
   }
