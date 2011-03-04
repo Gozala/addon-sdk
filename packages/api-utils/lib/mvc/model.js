@@ -154,6 +154,8 @@ exports.Model = Model;
 
 /**
 var Sidebar = Model.extend({
+  validate: function() {},
+  attributes: {},
   promptColor: function() {
     var cssColor = prompt("Please enter a CSS color:");
     this.set({color: cssColor});
