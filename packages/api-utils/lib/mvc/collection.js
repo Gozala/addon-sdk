@@ -40,23 +40,68 @@
 var Trait = require("light-traits").Trait;
 var EventEmitter = require("events").DeferredEventEmitter;
 
-var CollectionTrait = Trait.compose(EventEmitter, Trait({
-  model: Trait.required,
-  models: Trait.required,
+exports.Collection = Trait.compose(EventEmitter, Trait({
+  model: Trait.required,              // TabModel
+  attributes: Trait.required,         // {}
+  models: Trait.required,             // []
   length: 0,
   add: function add(models, options) {
-    if (Array.isArray(models))
-      models = [models];
+    options = options || {};
+    emit = this._boundedEmit || (this._boundedEmit = this._emit.bind(this));
+    models = Array.isArray(models) ? models : [ models ];
+
     models.forEach(function(model) {
-      this.model(model.valueOf())
-    }
-    this.model.create(model)
+      model = this.model.create('toJSON' in model ? model.toJSON() : model);
+      model.collection = this;
+
+      this._add(model, options);
+
+      model.on("change", emit);
+
+      if (!options.silent)
+        emit("add", model);
+
     }, this);
   },
   remove: function remove(models, options) {
+    options = options || {};
+    emit = this._boundedEmit || (this._boundedEmit = this._emit.bind(this));
+    models = Array.isArray(models) ? models : [ models ];
+
+    models.forEach(function(model) {
+      this._remove(model, options);
+
+      model.removeListener("change", emit);
+
+      if (!options.silent)
+        emit("remove", model);
+    }, this);
+  },
+  _add: function _add(model, options) {
+    var id = this.model.id;
+    // If model is already in the collection
+    if (this.has(model))
+      throw new Error("Can't add model to a set twice: " + model[id]);
+
+    this.attributes[id] = model;
+    this.models.push(model);
+    this.length ++;
+  },
+  _remove: function _remove(model, options) {
+    var id = this.model.id;
+    if (this.has(model)) {
+      delete this.attributes[id];
+      this.models.splice(this.models.indexOf(model), 1);
+      this.length --;
+    }
+  },
+  has: function has(model) {
+    return !!this.get(model[this.model.id] || model);
   },
   get: function get(id) {
+    return this.attributes[id];
   },
   at: function at(index) {
-  },
+    return this.models[index];
+  }
 }));
