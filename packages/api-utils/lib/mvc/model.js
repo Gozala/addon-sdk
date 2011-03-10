@@ -47,14 +47,7 @@ const Model = Trait.compose(EventEmitter, Trait({
    * copied onto the model as a direct property. Models can be retrieved by id
    * from collections, and the id is used to generate model URLs by default.
    */
-  //id: Trait.required,
-  /**
-   * The attributes property is the internal hash containing the model's state.
-   * Please use set to update the attributes instead of modifying them
-   * directly. If you'd like to retrieve and munge a copy of the model's
-   * attributes, use `toJSON` instead.
-   */
-  attributes: Trait.required,
+  id: Trait.required,
   /**
    * Consumer must implement custom validation logic in this method. Method is
    * called by a `set`, and is passed the attributes that are about to be
@@ -66,8 +59,13 @@ const Model = Trait.compose(EventEmitter, Trait({
    * Failed validations trigger an "error" event.
    */
   validate: Trait.required,
-
-  isModel: true,
+  /**
+   * The attributes property is the internal hash containing the model's state.
+   * Please use set to update the attributes instead of modifying them
+   * directly. If you'd like to retrieve and munge a copy of the model's
+   * attributes, use `toJSON` instead.
+   */
+  attributes: Trait.required,
   /**
    * Get the current value of an attribute from the model.
    */
@@ -141,14 +139,13 @@ const Model = Trait.compose(EventEmitter, Trait({
    * (https://developer.mozilla.org/en/JSON#toJSON()_method). 
    */
   toJSON: function toJSON() {
-    return this.valueOf();
-  },
-  valueOf: function valueOf() {
     return JSON.parse(JSON.stringify(this.attributes));
   }
 }));
 Model.extend = function extend(extension) {
-  return Trait.compose(this, Trait(extension));
+  var trait = Trait.compose(this, Trait(extension));
+  trait.extend = extend;
+  return trait;
 };
 exports.Model = Model;
 
