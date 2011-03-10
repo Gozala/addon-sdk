@@ -44,8 +44,7 @@ var isUndefined = utils.isUndefined;
 var isFunction = utils.isFunction;
 var isNumber = utils.isNumber;
 
-const Record = Trait.compose(Model, Trait({
-  isRecord: true,
+exports.Record = Model.extend({
   fields: Trait.required,
   validate: function validate(attributes) {
     var values = {};
@@ -62,59 +61,27 @@ const Record = Trait.compose(Model, Trait({
     }, this);
     return values;
   }
-}));
-exports.Record = Record;
-
-Record.Model = function Model(fields) {
-  return Trait.compose(Record, Trait({
-    attributes: {},
-    fields: fields
-  }));
-};
-
-Record.String = function String(defaultValue, message) {
-  message = message || "Incorrect value `{{value}}` was assigned to the" +
-            "`{{key}}` property which had to be a String";
-  message = message.replace('{{key}}', key);
-  return function stringGuard(value, key) {
-    if (isUndefined(value))
-      value = defaultsValue;
-    else if (!isString(value))
-      throw TypeError(message.replace('{{value}}', value));
-
-    return value;
-  }
-};
-
-Record.Number = function Number(defaultValue) {
-  return function numberGuard(value, key) {
-    if (isUndefined(value))
-      value = defaultValue;
-    else if (!isNumber(value))
-      throw TypeError("Property '" + key + "' expected to be a Number instead of: " + value);
-    return value;
-  }
-};
-
-Record.Scheme = function Scheme(fields) {
-  return function structureGuard(attributes, name) {
-    var data;
-
-    Object.keys(fields).forEach(function(key) {
-      (data || (data = {}))[key] = fields[key].call(this, attributes[key], key);
-    }, this);
-
-    return data;
-  };
-};
+});
 
 /*
 
 var Record = require("mvc/record").Record;
-var Point = Record.Scheme({ x: Record.Number(0), y: Record.Number(0) });
+var PointModel = Record.extend({
+  fields: {
+    x: guards.Number(0),
+    y: guards.Number(0)
+  }
+});
 
-var Segment = Record.Model({ start: Point, end: Point, opacity: Record.Number(0) });
-var segment = Segment.create();
+var SegmentModel = Record.extend({
+  fields: {
+    start: PointModel,
+    end: PointModel,
+  }
+});
+
+
+var segment = SegmentModel.create();
 segment.set({
   start: { x: 0, y: 0 },
   end: { x: 10, y: 17 },
