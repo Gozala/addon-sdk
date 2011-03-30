@@ -38,16 +38,44 @@
 "use strict";
 
 var Trait = require("light-traits").Trait;
-var EventEmitter = require("events").DeferredEventEmitter;
+var EventEmitter = require("events").EventEmitterTrait;
+var Extendable = require("extendable").Extendable;
+var extend = require("object").extend;
+var isFunction = require("type").isFunction;
 
-const Model = Trait.compose(EventEmitter, Trait({
+var prototype = extend(EventEmitter.create(), {
   /**
-   * A special property of models, the id is an arbitrary string
-   * (integer id or UUID). If you set the id in the attributes hash, it will be
-   * copied onto the model as a direct property. Models can be retrieved by id
-   * from collections, and the id is used to generate model URLs by default.
+   * The attributes property is the internal hash containing the model's state.
+   * Please use set to update the attributes instead of modifying them
+   * directly. If you'd like to retrieve and munge a copy of the model's
+   * attributes, use `toJSON` instead.
    */
-  id: Trait.required,
+  attributes: null,
+  /**
+   * The defaults hash can be used to specify the default attributes for your
+   * model. When creating an instance of the model, any unspecified attributes
+   * will be set to their default value.
+   */
+  defaults: null,
+  /**
+   * A special property of models, the id is an arbitrary string (integer id
+   * or UUID). If you set the id in the attributes hash, it will be copied onto
+   * the model as a direct property. Models can be retrieved by id from
+   * collections.
+   */
+  id: null,
+  /**
+   * Attribute name that is mapped to an `id` property of this model. Analog to
+   * primary key in DB.
+   */
+  '@' : 'id',
+  /**
+   * Initialize is an empty function by default. Override it with your own
+   * initialization logic.
+   * @param {Object} attributes
+   * @param {Object} options
+   */
+  initialize : function initialize(attributes, options) { return this; },
   /**
    * Consumer must implement custom validation logic in this method. Method is
    * called by a `set`, and is passed the attributes that are about to be
@@ -57,15 +85,16 @@ const Model = Trait.compose(EventEmitter, Trait({
    * complete error object that describes the error programmatically. `set` and
    * save will not continue if validate returns an error.
    * Failed validations trigger an "error" event.
+   * @param {Object} attributes
+   *    Map of key values that needs to be validated before they are set.
    */
-  validate: Trait.required,
-  /**
-   * The attributes property is the internal hash containing the model's state.
-   * Please use set to update the attributes instead of modifying them
-   * directly. If you'd like to retrieve and munge a copy of the model's
-   * attributes, use `toJSON` instead.
-   */
-  attributes: Trait.required,
+  validate: function validate(attributes) { return attributes; },
+    // Returns `true` if the attribute contains a value that is not null
+  // or undefined.
+  has: function(attr) {
+    return this.attributes[attr] != null;
+  },
+
   /**
    * Get the current value of an attribute from the model.
    */
@@ -80,17 +109,22 @@ const Model = Trait.compose(EventEmitter, Trait({
    * example change:title, and change:content.
    */
   set: function set(attributes, options) {
-    var changes, silent;
+    var changes, silent, id;
     // Validate all the attributes using internal validation mechanism. If
     // new attributes are returned that means that values were formated or
-    // overridden by a validator. 
+    // overridden by a validator.
     attributes = this.validate(attributes) || attributes;
 
     silent = options && options.silent;
+
+    // Check for changes of `id`.
+    if ((id = attributes[this['@']]))
+      this.id = id;
+
     Object.keys(attributes).forEach(function(key) {
       var previous = this.attributes[key];
       var value = this.attributes[key] = attributes[key];
-      
+
       if (!silent && previous !== value) {
         this._emit("change:" + key, ((changes || (changes = {}))[key] = {
           key: key, previous: previous, value: value
@@ -100,19 +134,21 @@ const Model = Trait.compose(EventEmitter, Trait({
 
     if (!silent && changes)
       this._emit("change", changes);
+
+    return this;
   },
   /**
    * Remove an attribute by deleting it from the internal attributes hash.
-   * Fires a "change" event unless silent is passed as an option. 
+   * Fires a "change" event unless silent is passed as an option.
    */
   unset: function unset(attributes, options) {
     var changes, silent;
-    
+
     silent = options && options.silent;
     Object.keys(attributes).forEach(function(key) {
       var previous = this.attributes[key];
       var value = (delete this.attributes[key], this.attributes[key]);
-      
+
       if (!silent && previous !== value) {
         this._emit("change:" + key, ((changes || (changes = {}))[key] = {
           key: key, previous: previous, value: value
@@ -136,33 +172,46 @@ const Model = Trait.compose(EventEmitter, Trait({
    * handed off to a view. The name of this method is a bit confusing, as it
    * doesn't actually return a JSON string — but I'm afraid that it's the way
    * that the [JavaScript API for JSON.stringify works]
-   * (https://developer.mozilla.org/en/JSON#toJSON()_method). 
+   * (https://developer.mozilla.org/en/JSON#toJSON()_method).
    */
   toJSON: function toJSON() {
     return JSON.parse(JSON.stringify(this.attributes));
   }
+});
+
+exports.Model = Extendable.extend(Object.defineProperties(prototype, {
+  constructor: {
+    value: function Model(attributes, options) {
+      if (!(this instanceof Model))
+        return new Model(attributes, options);
+
+      attributes = attributes || {};
+      var defaults = this.defaults;
+      if (defaults) {
+        if (isFunction(defaults))
+          defaults = defaults();
+        attributes = extend({}, defaults, attributes);
+      }
+      this.attributes = {};
+      this.set(attributes, { silent : true });
+      if (options && 'collection' in options && options.collection)
+        this.collection = options.collection;
+      this.initialize(attributes, options);
+    }
+  }
 }));
-Model.extend = function extend(extension) {
-  var trait = Trait.compose(this, Trait(extension));
-  trait.extend = extend;
-  return trait;
-};
-exports.Model = Model;
 
 /**
+var Model = require("mvc/model").Model;
 var Sidebar = Model.extend({
-  validate: function() {},
-  attributes: {},
-  promptColor: function() {
-    var cssColor = prompt("Please enter a CSS color:");
-    this.set({color: cssColor});
+  promptColor: function(value) {
+    this.set({ color: value });
   }
 });
 
-var sidebar = Sidebar.create();
+var sidebar = Sidebar({ color: 'white' });
 sidebar.on('change:color', function(event) {
-  $('#sidebar').css({ background: event.value });
+  console.log('color is no longer ' + event.previous + ' it is ' + event.value);
 });
-sidebar.set({ color: 'white' });
-sidebar.promptColor();
+sidebar.promptColor('red');
 */

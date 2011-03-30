@@ -45,16 +45,15 @@ var isFunction = utils.isFunction;
 var isNumber = utils.isNumber;
 
 exports.Record = Model.extend({
-  fields: Trait.required,
   validate: function validate(attributes) {
     var values = {};
     Object.keys(attributes).forEach(function(key) {
-      var guard = this.fields[key];
-      if (guard) {
-        if (guard.isRecord)
-          values[key] = guard.validate(attributes[key]);
+      var field = this[key];
+      if (field) {
+        if (field.prototype instanceof Model)
+          values[key] = Model(attributes[key]);
         else
-          values[key] = guard.call(this, attributes[key], key);
+          values[key] = field(attributes[key], key);
       }
       else
         throw new Error("Record does not defines field '" + key + "'");
@@ -65,26 +64,23 @@ exports.Record = Model.extend({
 
 /*
 
+var guards = require("guards");
 var Record = require("mvc/record").Record;
 var PointModel = Record.extend({
-  fields: {
-    x: guards.Number(0),
-    y: guards.Number(0)
-  }
+  x: guards.Number({ defaults: 0 }),
+  y: guards.Number({ defaults: 0 })
 });
 
 var SegmentModel = Record.extend({
-  fields: {
-    start: PointModel,
-    end: PointModel,
-  }
+  start: PointModel,
+  end: PointModel,
+  opacity: guards.Number({ defaults: 0 })
 });
 
 
-var segment = SegmentModel.create();
-segment.set({
+var segment = SegmentModel({
   start: { x: 0, y: 0 },
   end: { x: 10, y: 17 },
   opacity: 29
-})
+});
 */
