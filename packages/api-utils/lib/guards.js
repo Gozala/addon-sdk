@@ -38,14 +38,77 @@
 
 "use strict";
 
-var isArray, isFunction, isObject, isUndefined, isNumber, isString, utils;
-utils = require("./type");
-isArray = utils.isArray;
-isFunction = utils.isFunction;
-isUndefined = utils.isUndefined;
-isNumber = utils.isNumber;
-isString = utils.isString;
-isObject = utils.isObject;
+var utils = require("./type");
+var isArray = utils.isArray;
+var isFunction = utils.isFunction;
+var isUndefined = utils.isUndefined;
+var isNull = utils.isNull;
+var isNumber = utils.isNumber;
+var isString = utils.isString;
+var isObject = utils.isObject;
+
+/*
+ * # Function #
+ *
+ * Function creates a function guard - function that may be used to perform run
+ * time type checks on the values. Function takes an optional `defaultValue`
+ * that will be returned by a created guard if it's invoked without (or with
+ * `undefined`) `value` argument. The `defaultValue` will fall back to
+ * `undefined` if not provided. Function also takes another optional argument
+ * `message` that represents a template of a message of the `TypeError` that
+ * will be thrown by guard if it's invoked with invalid `value`.
+ *
+ * @param {Object|String|Number|function} [defaultValue]
+ *    Value that returned guard is going to fall back to if invoked without
+ *    a `value` or if it's `undefined`.
+ * @param {String} [message]
+ *    Optional error message template that will be a message of a `TypeError`
+ *    that is will be thrown if returned guard is invoked with a wrong `value`
+ *    type. If `message` contains `"{{value}}"` and `"{{type}}"` strings they
+ *    are going to be replaced with an actual `value` and it's type.
+ *
+ * ## Examples ##
+ *
+ *
+ *      var guards = require("guards");
+ *
+ *      var Callee = guards.Function("Anonymous");
+ *
+ *      Callee(Object) == Object
+ *      // true
+ *
+ *      Callee(function() { return "hello world" })
+ *      Callee(function() { return "hello world" })
+ *
+ *      Callee(7);
+ *      // TypeError: Function expected instead of number `7`
+ *
+ *      guards.Function("Hi", "{{type}} is not a function.");
+ *
+ *      Callee({})
+ *      // TypeError: object is not a function
+ */
+exports.Function = function Function(options) {
+  options = options || {};
+  message = options.message || "Function expected instead of {{type}} `{{value}}`";
+
+  return function FunctionG(value, key) {
+    // If `value` is `undefined` (which may mean that it was not provided)
+    // falling back to the `defaultValue`.
+    if (isUndefined(value) && 'defaults' in options)
+      value = options.defaults;
+    // If `value` is defined and it's not a function `TypeError` is thrown with
+    // a desired message.
+    else if (!isFunction(value))
+      throw new TypeError(message.replace("{{key}}", key)
+                                 .replace("{{value}}", value)
+                                 .replace("{{type}}", typeof value));
+
+    // If error was not thrown the `value` passed a guard successfully and it
+    // can be returned.
+    return value;
+  }
+};
 
 /**
  * # String #
@@ -69,7 +132,7 @@ isObject = utils.isObject;
  *
  * ## Examples ##
  *
-  *
+ *
  *      var guards = require("guards");
  *
  *      var gUser = guards.String("Anonymous");
@@ -88,17 +151,18 @@ isObject = utils.isObject;
  *      var msg = gHi(function() {});
  *      // TypeError: string expected not a function
  */
-exports.String = function String(defaultValue, message) {
+exports.String = function String(options) {
+  options = options || {}
   // If optional error `message` template is not provided falling back to the
   // built-in one.
-  message = message || "String expected instead of {{type}} `{{value}}`";
+  message = options.message || "String expected instead of {{type}} `{{value}}`";
 
   // Generating a guard function.
   return function GString(value, key) {
     // If `value` is `undefined` (which may mean that it was not provided)
     // falling back to the `defaultValue`.
-    if (isUndefined(value))
-      value = defaultValue;
+    if (isUndefined(value) && 'defaults' in options)
+      value = options.defaults;
     // If `value` is defined and it's not a string `TypeError` is thrown with
     // a desired message.
     else if (!isString(value))
@@ -151,20 +215,71 @@ exports.String = function String(defaultValue, message) {
  *      var count = gCount({ value: 4 });
  *      // TypeError: number expected not a object
  */
-exports.Number = function Number(defaultValue, message) {
+exports.Number = function Number(options) {
+  options = options || {};
   // If optional error `message` template is not provided falling back to the
   // built-in one.
-  message = message || "Number expected instead of {{type}} `{{value}}`";
+  var message = options.message || "Number expected instead of {{type}} `{{value}}`";
 
   // Generating a guard function.
   return function GNumber(value, key) {
     // If `value` is `undefined` (which may mean that it was not provided)
     // falling back to the `defaultValue`.
-    if (isUndefined(value))
-      value = defaultValue;
+    if (isUndefined(value) && 'defaults' in options)
+      value = options.defaults;
     // If `value` is defined and it's not a number `TypeError` is thrown with
     // a desired message.
     else if (!isNumber(value))
+     throw new TypeError(message.replace("{{key}}", key)
+                                 .replace("{{value}}", value)
+                                 .replace("{{type}}", typeof value));
+
+    // If error was not thrown the `value` passed a guard successfully and it
+    // can be returned.
+    return value;
+  }
+};
+
+exports.Boolean = function Boolean(options) {
+  options = options || {};
+  // If optional error `message` template is not provided falling back to the
+  // built-in one.
+  var message = options.message || "Boolean expected instead of {{type}} `{{value}}`";
+
+  // Generating a guard function.
+  return function GBoolean(value, key) {
+    // If `value` is `undefined` (which may mean that it was not provided)
+    // falling back to the `defaultValue`.
+    if (isUndefined(value) && 'defaults' in options)
+      value = options.defaults;
+    // If `value` is defined and it's not a boolean `TypeError` is thrown with
+    // a desired message.
+    else if (!isBullean(value))
+     throw new TypeError(message.replace("{{key}}", key)
+                                 .replace("{{value}}", value)
+                                 .replace("{{type}}", typeof value));
+
+    // If error was not thrown the `value` passed a guard successfully and it
+    // can be returned.
+    return value;
+  }
+};
+
+exports.Null = function Null(options) {
+  options = options || {};
+  // If optional error `message` template is not provided falling back to the
+  // built-in one.
+  var message = options.message || "Boolean expected instead of {{type}} `{{value}}`";
+
+  // Generating a guard function.
+  return function GNull(value, key) {
+    // If `value` is `undefined` (which may mean that it was not provided)
+    // falling back to the `defaultValue`.
+    if (isUndefined(value) && 'defaults' in options)
+      value = option.defaults;
+    // If `value` is defined and it's not a null `TypeError` is thrown with
+    // a desired message.
+    else if (!isNull(value))
      throw new TypeError(message.replace("{{key}}", key)
                                  .replace("{{value}}", value)
                                  .replace("{{type}}", typeof value));
@@ -255,7 +370,7 @@ var Schema = exports.Schema = function Schema(descriptor, message) {
     // Since schema defines object structure guard accepts only object `value`s
     // if given `value` is not an object we throw `TypeError` with a desired
     // message.
-    if (!isObject(value))
+    if (!isObject(value) || isArray(value))
       throw new TypeError(message.replace("{{key}}", key)
                                  .replace("{{value}}", value)
                                  .replace("{{type}}", typeof value));
@@ -463,4 +578,59 @@ exports.Tuple = function Tuple(guards, message) {
       return guard(value[index], index);
     }, this);
   };
+};
+
+/**
+ * # AnyOf #
+ *
+ * `AnyOf` can be used to define guards that validates `value`s that must
+ * satisfy just one of many guards. This is handy in specific specific
+ * scenarios were valid `value` may have different types or schemas.
+ * Function takes any number guards as an arguments and returns composed
+ * guard, which when called will try to validate a given `value` with a given
+ * guards in an order they were passed, the first validate `value` is returned
+ * as result, unless non will validate in which case `TypeError` is thrown.
+ *
+ * @params {Function} guard
+ *    Guards used for validations.
+ * @returns {Function}
+ *
+ * ## Examples ##
+ *
+ *      var guards = require("guards");
+ *      var ObjectPoint = guards.Schema({
+ *        x: guards.Number(0),
+ *        y: guards.Number(0)
+ *      });
+ *      var ArrayPoint = guards.Tuple([
+ *        guards.Number(0),
+ *        guards.Number(0)
+ *      ]);
+ *      var Point = guards.AnyOf(ObjectPoint, ArrayPoint);
+ *
+ *      Point([ 1 ])
+ *      // [ 1, 0 ]
+ *
+ *      Point({ y: 15 })
+ *      // { x: 0, y: 15 }
+ *
+ *      Point(1, 2)
+ *      // TypeError: Passed value: `1` has invalid type or structure
+ */
+exports.AnyOf = function AnyOf() {
+  // Template of error `message` that will be thrown if incorrect `value` is
+  // passed to it.
+  var message = "Passed value: `{{value}}` has invalid type or structure";
+  // Saving array of the value guards.
+  var guards = Array.prototype.slice.call(arguments);
+  return function GAnyOf(value, key) {
+    // We try to return `value` that passes at least on validation, by trying
+    // to validate it with each guard.
+    for (var i = 0, ii = guards.length; i < ii; i++)
+      try { return guards[i](value, key); } catch(e) {}
+    // If got this far then non of the validations succeeded as value was not
+    // returned, so we throw a `TypeError` that will propagate to a caller of
+    // this guard notifying it that `value` does not validates.
+    throw new TypeError(message.replace("{{value}}", value));
+  }
 };
