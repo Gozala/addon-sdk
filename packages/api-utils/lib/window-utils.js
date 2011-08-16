@@ -38,6 +38,7 @@
 "use strict";
 
 const {Cc,Ci} = require("chrome");
+const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
 var errors = require("./errors");
 
@@ -214,8 +215,10 @@ exports.isBrowser = isBrowser;
 
 exports.hiddenWindow = appShellService.hiddenDOMWindow;
 exports.createRemoteBrowser = function createRemoteBrowser() {
-  let document = exports.hiddenWindow.document;
-  let browser = document.createElement("browser");
+  // Use active browser window cause in mobile firefox html document is loaded
+  // in the hidden window that can not create XUL browser elements.
+  let document = exports.activeBrowserWindow.document;
+  let browser = document.createElementNS(XUL_NS, "browser");
   // Remote="true" enable everything here:
   // http://mxr.mozilla.org/mozilla-central/source/content/base/src/nsFrameLoader.cpp#1347
   browser.setAttribute("remote","true");
