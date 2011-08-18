@@ -214,14 +214,15 @@ function isBrowser(window) {
 exports.isBrowser = isBrowser;
 
 exports.hiddenWindow = appShellService.hiddenDOMWindow;
-exports.createRemoteBrowser = function createRemoteBrowser() {
+exports.createRemoteBrowser = function createRemoteBrowser(remote) {
   // Use active browser window cause in mobile firefox html document is loaded
   // in the hidden window that can not create XUL browser elements.
   let document = exports.activeBrowserWindow.document;
   let browser = document.createElementNS(XUL_NS, "browser");
   // Remote="true" enable everything here:
   // http://mxr.mozilla.org/mozilla-central/source/content/base/src/nsFrameLoader.cpp#1347
-  browser.setAttribute("remote","true");
+  if (remote !== false)
+    browser.setAttribute("remote","true");
   // Type="content" is mandatory to enable stuff here:
   // http://mxr.mozilla.org/mozilla-central/source/content/base/src/nsFrameLoader.cpp#1776
   browser.setAttribute("type","content");
