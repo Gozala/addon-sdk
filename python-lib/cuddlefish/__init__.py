@@ -74,6 +74,12 @@ parser_groups = (
                                    default=None,
                                    cmds=['test', 'run', 'testex', 'testpkgs',
                                          'testall'])),
+        (("", "--binary-args",), dict(dest="cmdargs",
+                                 help=("additional arguments passed to the "
+                                       "binary"),
+                                 metavar=None,
+                                 default=None,
+                                 cmds=['run', 'test'])),
         (("-a", "--app",), dict(dest="app",
                                 help=("app to run: firefox (default), "
                                       "xulrunner, fennec, or thunderbird"),
@@ -158,7 +164,12 @@ parser_groups = (
                                      default=False,
                                      cmds=['run', 'test'])),
         (("", "--strip-xpi",), dict(dest="strip_xpi",
-                                    help="remove unused modules from XPI",
+                                    help="(ignored, deprecated, will be removed)",
+                                    action="store_true",
+                                    default=False,
+                                    cmds=['xpi'])),
+        (("", "--no-strip-xpi",), dict(dest="no_strip_xpi",
+                                    help="retain unused modules in XPI",
                                     action="store_true",
                                     default=False,
                                     cmds=['xpi'])),
@@ -216,12 +227,6 @@ parser_groups = (
                                          default=0,
                                          cmds=['test', 'testex', 'testpkgs',
                                                'testall'])),
-        (("", "--binary-args",), dict(dest="cmdargs",
-                                 help=("additional arguments passed to the "
-                                       "binary"),
-                                 metavar=None,
-                                 default=None,
-                                 cmds=['run', 'test'])),
         ]
      ),
     )
@@ -361,7 +366,7 @@ def test_all_examples(env_root, defaults):
 
 def test_all_packages(env_root, defaults):
     deps = []
-    target_cfg = Bunch(name = "testpkgs", dependencies = deps)
+    target_cfg = Bunch(name = "testpkgs", dependencies = deps, version="fake")
     pkg_cfg = packaging.build_config(env_root, target_cfg)
     for name in pkg_cfg.packages:
         if name != "testpkgs":
@@ -746,8 +751,10 @@ def run(arguments=sys.argv[1:], target_cfg=None, pkg_cfg=None,
         # build_manifest earlier
         used_files = set(manifest.get_used_files())
 
-        if not options.strip_xpi:
-            used_files = None # disables the filter
+        if options.strip_xpi:
+            print >>stdout, "--strip-xpi is now the default: argument ignored"
+        if options.no_strip_xpi:
+            used_files = None # disables the filter, includes all files
 
         xpi_name = XPI_FILENAME % target_cfg.name
         print >>stdout, "Exporting extension to %s." % xpi_name

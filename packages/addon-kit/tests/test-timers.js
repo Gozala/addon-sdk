@@ -13,12 +13,12 @@
  *
  * The Original Code is Jetpack.
  *
- * The Initial Developer of the Original Code is Mozilla
+ * The Initial Developer of the Original Code is Mozilla.
  * Portions created by the Initial Developer are Copyright (C) 2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Irakli Gozalishvili <gozala@mozilla.com>
+ *   Shane Tomlinson <stomlinson@mozilla.com> (Original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -33,21 +33,12 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+const timers = require("timers");
 
-"use strict";
-
-// Override the default Iterator function with one that passes
-// a second argument to custom iterator methods that identifies
-// the call as originating from an Iterator function so the custom
-// iterator method can return [key, value] pairs just like default
-// iterators called via the default Iterator function.
-
-"use strict";
-
-Iterator = (function(DefaultIterator) {
-  return function Iterator(obj, keysOnly) {
-    if ("__iterator__" in obj && !keysOnly)
-      return obj.__iterator__.call(obj, false, true);
-    return DefaultIterator(obj, keysOnly);
-  };
-})(Iterator);
+exports.testTimeout = function (test) {
+  test.waitUntilDone();
+  timers.setTimeout(function () {
+    test.pass("timers.setTimeout works");
+    test.done();
+  }, 0);
+}
