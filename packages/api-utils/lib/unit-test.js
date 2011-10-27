@@ -42,7 +42,6 @@ var timer = require("./timer");
 exports.findAndRunTests = function findAndRunTests(options) {
   var TestFinder = require("./unit-test-finder").TestFinder;
   var finder = new TestFinder({
-    dirs: options.dirs,
     filter: options.filter,
     testInProcess: options.testInProcess,
     testOutOfProcess: options.testOutOfProcess
@@ -63,6 +62,7 @@ var TestRunner = exports.TestRunner = function TestRunner(options) {
   this.passed = 0;
   this.failed = 0;
   this.testRunSummary = [];
+  this.expectFailNesting = 0;
 };
 
 TestRunner.prototype = {
@@ -79,43 +79,36 @@ TestRunner.prototype = {
     }
   },
 
-  makeSandboxedLoader: function makeSandboxedLoader(options) {
-    if (!this.fs)
-      console.error("Hey, either you didn't pass .fs when building the" +
-                    " TestRunner, or you used 'new' when calling" +
-                    " test.makeSandboxedLoader. Don't do that.");
-
-    if (!options)
-      options = {console: console};
-    options.fs = this.fs;
-
-    var Cuddlefish = require("./cuddlefish");
-
-    if ("moduleOverrides" in options) {
-      var moduleOverrides = options.moduleOverrides;
-      delete options.moduleOverrides;
-      options.getModuleExports = function getModuleExports(basePath, module) {
-        if (module in moduleOverrides)
-          return moduleOverrides[module];
-        return null;
-      }
-    }
-
-    return new Cuddlefish.Loader(options);
-  },
-
   pass: function pass(message) {
-    console.info("pass:", message);
-    this.passed++;
-    this.test.passed++;
+    if(!this.expectFailure) {
+      console.info("pass:", message);
+      this.passed++;
+      this.test.passed++;
+    }
+    else {
+      this.expectFailure = false;
+      this.fail('Failure Expected: ' + message);
+    }
   },
 
   fail: function fail(message) {
-    this._logTestFailed("failure");
-    console.error("fail:", message);
-    console.trace();
-    this.failed++;
-    this.test.failed++;
+    if(!this.expectFailure) {
+      this._logTestFailed("failure");
+      console.error("fail:", message);
+      console.trace();
+      this.failed++;
+      this.test.failed++;
+    }
+    else {
+      this.expectFailure = false;
+      this.pass(message);
+    }
+  },
+
+  expectFail: function(callback) {
+    this.expectFailure = true;
+    callback();
+    this.expectFailure = false;
   },
 
   exception: function exception(e) {
@@ -229,9 +222,48 @@ TestRunner.prototype = {
     }
   },
 
+  assertFunction: function assertFunction(a, message) {
+    this.assertStrictEqual('function', typeof a, message);
+  },
+
+  assertUndefined: function(a, message) {
+    this.assertStrictEqual('undefined', typeof a, message);
+  },
+
+  assertNotUndefined: function(a, message) {
+    this.assertNotStrictEqual('undefined', typeof a, message);
+  },
+
+  assertNull: function(a, message) {
+    this.assertStrictEqual(null, a, message);
+  },
+
+  assertNotNull: function(a, message) {
+    this.assertNotStrictEqual(null, a, message);
+  },
+
+  assertObject: function(a, message) {
+    this.assertStrictEqual('[object Object]', Object.prototype.toString.apply(a), message);
+  },
+
+  assertString: function(a, message) {
+    this.assertStrictEqual('[object String]', Object.prototype.toString.apply(a), message);
+  },
+
+  assertArray: function(a, message) {
+    this.assertStrictEqual('[object Array]', Object.prototype.toString.apply(a), message);
+  },
+  
+  assertNumber: function(a, message) {
+    this.assertStrictEqual('[object Number]', Object.prototype.toString.apply(a), message);                
+  },
+
   done: function done() {
     if (!this.isDone) {
       this.isDone = true;
+      if(this.test.teardown) {
+        this.test.teardown(this);
+      }
       if (this.waitTimeout !== null) {
         timer.clearTimeout(this.waitTimeout);
         this.waitTimeout = null;
@@ -327,7 +359,9 @@ TestRunner.prototype = {
             a = a();
           }
           catch(e) {
-            mock.fail("Exception when calling asynchronous assertion: " + e);
+            test.fail("Exception when calling asynchronous assertion: " + e);
+            finished = true;
+            return;
           }
         }
         appliedArgs.push(a);
@@ -391,6 +425,9 @@ TestRunner.prototype = {
     this.testFailureLogged = false;
 
     try {
+      if(this.test.setup) {
+        this.test.setup(this);
+      }
       this.test.testFunction(this);
     } catch (e) {
       this.exception(e);

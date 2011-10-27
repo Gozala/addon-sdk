@@ -36,6 +36,9 @@ For example, this widget contains an image, so it looks like a simple icon:
     });
 
 Upon creation, the widget is automatically added to the add-on bar.
+You can set the width of a widget, but the height is fixed so as to fit in the
+add-on bar. If the content is an image, it is automatically scaled to be 16x16
+pixels.
 
 This widget contains an entire web page:
 
@@ -80,7 +83,7 @@ Nuvola icon set, http://www.icon-king.com/projects/nuvola/ which is made
 available under the LGPL 2.1:
 http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html -->
 
-<img class="image-center" src="media/screenshots/widget-panel-clock.png"
+<img class="image-center" src="static-files/media/screenshots/widget-panel-clock.png"
 alt="Panel attached to a widget">
 <br>
 
@@ -253,11 +256,15 @@ Represents a widget object.
     It may contain HTML. Widgets must have either the `content` property or the
     `contentURL` property set.
 
+    If the content is an image, it is automatically scaled to be 16x16 pixels.
+
   @prop [contentURL] {string}
     An optional string URL to content to load into the widget. This can be
     [local content](dev-guide/addon-development/web-content.html) or remote
     content, an image or web content. Widgets must have either the `content`
     property or the `contentURL` property set.
+
+    If the content is an image, it is automatically scaled to be 16x16 pixels.
 
   @prop [panel] {Panel}
     An optional [panel](packages/addon-kit/docs/panel.html) to open when the
@@ -334,7 +341,7 @@ Represents a widget object.
 @param data {value}
   The message to send.
   The message can be any
-<a href = "dev-guide/addon-development/web-content.html#json_serializable">JSON-serializable value</a>.
+<a href = "dev-guide/addon-development/content-scripts/using-port.html#json_serializable">JSON-serializable value</a>.
 </api>
 
 <api name="on">
@@ -449,9 +456,9 @@ Represents a widget object.
 * send events to the content script using the `port.emit` function
 * receive events from the content script using the `port.on` function
 
-See
-<a href="dev-guide/addon-development/web-content.html#content_script_events">
-Communicating with Content Scripts</a> for details.
+See the guide to
+<a href="dev-guide/addon-development/content-scripts/using-port.html">
+communicating using <code>port</code></a> for details.
 </api>
 
 <api name="attach">
@@ -475,7 +482,7 @@ code in the widget's `message` event.
 @argument {value}
 Listeners are passed a single argument which is the message posted
 from the content script. The message can be any
-<a href = "dev-guide/addon-development/web-content.html#json_serializable">JSON-serializable value</a>.
+<a href = "dev-guide/addon-development/content-scripts/using-port.html#json_serializable">JSON-serializable value</a>.
 </api>
 
 <api name="mouseover">
@@ -537,7 +544,7 @@ In this example `WidgetView` is used to display different content for
   Sends a message to the widget view's content scripts.
 @param data {value}
   The message to send. The message can be any
-<a href = "dev-guide/addon-development/web-content.html#json_serializable">JSON-serializable value</a>.
+<a href = "dev-guide/addon-development/content-scripts/using-port.html#json_serializable">JSON-serializable value</a>.
 </api>
 
 <api name="on">
@@ -642,9 +649,9 @@ In this example `WidgetView` is used to display different content for
 * send events to the content script using the `port.emit` function
 * receive events from the content script using the `port.on`
 
-See
-<a href="dev-guide/addon-development/web-content.html#content_script_events">
-Communicating with Content Scripts</a> for details.
+See the guide to
+<a href="dev-guide/addon-development/content-scripts/using-port.html">
+communicating using <code>port</code></a> for details.
 </api>
 
 <api name="detach">
@@ -670,7 +677,7 @@ code in the widget view's `message` event.
 @argument {value}
 Listeners are passed a single argument which is the message posted
 from the content script. The message can be any
-<a href = "dev-guide/addon-development/web-content.html#json_serializable">JSON-serializable value</a>.
+<a href = "dev-guide/addon-development/content-scripts/using-port.html#json_serializable">JSON-serializable value</a>.
 </api>
 
 <api name="mouseover">

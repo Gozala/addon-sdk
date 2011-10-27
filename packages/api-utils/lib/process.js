@@ -34,23 +34,54 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+"use strict";
+
 const { Cc, Ci } = require("chrome");
 const { createRemoteBrowser } = require("api-utils/window-utils");
 const { channel } = require("./channel");
 const { setTimout } = require('./timer');
 const packaging = require('@packaging');
 
-exports.spawn = function spawn(id) {
-  var browser = createRemoteBrowser(packaging.enable_e10s);
-  let messageManager = browser.QueryInterface(Ci.nsIFrameLoaderOwner).
-                       frameLoader.messageManager;
+const addonService = '@mozilla.org/addon/service;1' in Cc ?
+  Cc['@mozilla.org/addon/service;1'].getService(Ci.nsIAddonService) : null
 
-  messageManager.loadFrameScript(packaging.uri + 'bootstrap.js', false)
-  messageManager.loadFrameScript('data:,main(' + JSON.stringify(packaging) +
-                                 ', "' + id + '");', false);
+const ENABLE_E10S = packaging.enable_e10s;
 
-  return {
-    channel: channel.bind(null, browser.ownerDocument.defaultView,
-                                messageManager)
-  }
+function loadScript(target, uri, sync) {
+  return 'loadScript' in target ? target.loadScript(uri, sync)
+                                : target.loadFrameScript(uri, sync)
+}
+
+function process(target, id, uri, scope) {
+  // Please note that even though `loadScript`, is executed before channel is
+  // returned, users still are able to subscribe for messages before any message
+  // will be sent. That's because `loadScript` queues script execution on the
+  // other process, which means they will execute async (on the next turn of
+  // event loop), while the channel for messages is returned immediately (in
+  // the same turn of event loop).
+
+  loadScript(target, packaging.loader, false);
+  loadScript(target, 'data:,let options = ' + JSON.stringify(packaging));
+  loadScript(target, 'data:,Loader.new(options).main(' +
+                        '"' + id + '", "' + uri + '");', false);
+
+  return { channel: channel.bind(null, scope, target) }
+}
+
+exports.spawn = function spawn(id, uri) {
+  return function promise(deliver) {
+    // If `nsIAddonService` is available we use it to create an add-on process,
+    // otherwise we fallback to the remote browser's message manager.
+    if (ENABLE_E10S && addonService) {
+      console.log('!!!!!!!!!!!!!!!!!!!! Using addon process !!!!!!!!!!!!!!!!!!');
+      deliver(process(addonService.createAddon(), id, uri));
+    } else {
+      createRemoteBrowser(ENABLE_E10S)(function(browser) {
+        let messageManager = browser.QueryInterface(Ci.nsIFrameLoaderOwner).
+                                     frameLoader.messageManager
+        let window = browser.ownerDocument.defaultView;
+        deliver(process(messageManager, id, uri, window));
+      });
+    }
+  };
 };

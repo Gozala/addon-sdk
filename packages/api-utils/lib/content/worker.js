@@ -38,7 +38,6 @@
  * ***** END LICENSE BLOCK ***** */
 "use strict";
 
-const { shims } = require('../cuddlefish');
 const { Trait } = require('../traits');
 const { EventEmitter, EventEmitterTrait } = require('../events');
 const { Ci, Cu, Cc } = require('chrome');
@@ -122,7 +121,6 @@ const WorkerGlobalScope = AsyncEventEmitter.compose({
     let params = Array.slice(arguments, 2);
     let id = timer.setInterval(function(self) {
       try {
-        delete self._timers[id];
         callback.apply(null, params); 
       } catch(e) {
         self._addonWorker._asyncEmit('error', e);
@@ -230,10 +228,7 @@ const WorkerGlobalScope = AsyncEventEmitter.compose({
       // at any time!
       unsafeWindow: { get: function () window.wrappedJSObject }
     });
-    
-    // Overriding / Injecting some natives into sandbox.
-    Cu.evalInSandbox(shims.contents, sandbox, JS_VERSION, shims.filename);
-    
+
     // Initialize timer lists
     this._timers = {};
 
@@ -521,8 +516,9 @@ const Worker = AsyncEventEmitter.compose({
   
   _documentUnload: function _documentUnload(subject, topic, data) {
     let innerWinID = subject.QueryInterface(Ci.nsISupportsPRUint64).data;
-    if (innerWinID != this._windowID) return;
+    if (innerWinID != this._windowID) return false;
     this._workerCleanup();
+    return true;
   },
 
   get url() {
@@ -556,10 +552,14 @@ const Worker = AsyncEventEmitter.compose({
       this._contentWorker._destructor();
     this._contentWorker = null;
     this._window = null;
-    observers.remove("inner-window-destroyed", this._documentUnload);
-    this._windowID = null;
-    this._earlyEvents.slice(0, this._earlyEvents.length);
-    this._emit("detach");
+    // This method may be called multiple times,
+    // avoid dispatching `detach` event more than once
+    if (this._windowID) {
+      this._windowID = null;
+      observers.remove("inner-window-destroyed", this._documentUnload);
+      this._earlyEvents.slice(0, this._earlyEvents.length);
+      this._emit("detach");
+    }
   },
   
   /**
