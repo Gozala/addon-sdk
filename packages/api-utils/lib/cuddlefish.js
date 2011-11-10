@@ -215,7 +215,7 @@ const Loader = {
     // details see: Bug-697422.
     let requirement = manifest && manifest.requirements[id];
     if (!requirement)
-        throw Error("Module: " + requirer && requirer.id + ' located at ' +
+        throw Error("Module: " + (requirer && requirer.id) + ' located at ' +
                     base + " has no athority to load: " + id);
     let uri = requirement.uri;
 
@@ -248,9 +248,17 @@ const Loader = {
     try {
       let module = this.modules[uri] = Module.new(id, uri);
       this.load(module); // this is where the addon's main.js finally runs
-      let main = Object.freeze(module).exports;
-      if (main.main)
-        main.main();
+      let program = Object.freeze(module).exports;
+
+      if (typeof(program.onUnload) === 'function')
+        this.require('api-utils/unload').when(program.onUnload);
+
+      if (program.main) {
+        let { exit, staticArgs } = this.require('api-utils/system');
+        let { loadReason } = this.require('@packaging');
+        program.main({ loadReason: loadReason, staticArgs: staticArgs },
+                     { print: function($) dump($ + '\n'), quit: exit });
+      }
     } catch (error) {
       Cu.reportError(error);
       if (this.globals.console) this.globals.console.exception(error);
@@ -300,6 +308,10 @@ const Loader = {
   },
   unload: function unload(reason, callback) {
     this.require('api-utils/unload').send(reason, callback);
+    // `cfx run` expects to see 'OK' or 'FAIL' to be written into a `resultFile`
+    // as a signal of quit.
+    if ('resultFile' in options && reason === 'shutdown')
+      this.require('api-utils/system').exit(0);
   }
 };
 exports.Loader = Loader;
