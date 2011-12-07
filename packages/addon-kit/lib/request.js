@@ -37,9 +37,9 @@
 
 "use strict";
 
-const { Base } = require("api-utils/base");
+const { Base, Class } = require("api-utils/base");
 let { Namespace } = require("api-utils/namespace");
-const xhr = require("api-utils/xhr");
+const { XMLHttpRequest } = require("api-utils/xhr");
 const errors = require("api-utils/errors");
 const apiUtils = require("api-utils/api-utils");
 
@@ -50,7 +50,8 @@ const EventEmitter = require('api-utils/events').EventEmitter.compose({
   constructor: function EventEmitter() this
 });
 
-// Instead of creating a new validator for each request, just make one and reuse it.
+// Instead of creating a new validator for each request, just make one and
+// reuse it.
 const validator = new OptionsValidator({
   url: {
     //XXXzpao should probably verify that url is a valid url as well
@@ -73,94 +74,93 @@ const validator = new OptionsValidator({
     is: ["string", "null"],
   }
 });
+const validate = validator.validateSingleOption.bind(validator);
 
 const REUSE_ERROR = "This request object has been used already. You must " +
                     "create a new one to make a new request."
 
-function Request(options) {
-  const self = EventEmitter(),
-        _public = self._public;
-  // request will hold the actual XHR object
-  let request;
-  let response;
+function send(request, mode) {
+  let { events, url, headers, content, contentType,
+        overrideMimeType } = internals(request);
 
-  if ('onComplete' in options)
-    self.on('complete', options.onComplete)
-  options = validator.validateOptions(options);
+  // If this request has already been used, then we can't reuse it.
+  // Throw an error.
+  if (request.response)
+    throw new Error(REUSE_ERROR);
 
-  // function to prep the request since it's the same between GET and POST
-  function makeRequest(mode) {
-    // If this request has already been used, then we can't reuse it. Throw an error.
-    if (request) {
-      throw new Error(REUSE_ERROR);
-    }
+  let xhr = new XMLHttpRequest();
+  // Build the data to be set. For GET requests, we want to append that to
+  // the URL before opening the request.
+  let data = makeQueryString(content);
 
-    request = new xhr.XMLHttpRequest();
+  // If the URL already has ? in it, then we want to just use &
+  if (mode == "GET" && data)
+    url = url + (/\?/.test(url) ? "&" : "?") + data;
 
-    let url = options.url;
-    // Build the data to be set. For GET requests, we want to append that to
-    // the URL before opening the request.
-    let data = makeQueryString(options.content);
-    if (mode == "GET" && data) {
-      // If the URL already has ? in it, then we want to just use &
-      url = url + (/\?/.test(url) ? "&" : "?") + data;
-    }
+  // open the request
+  xhr.open(mode, url);
 
-    // open the request
-    request.open(mode, url);
+  // request header must be set after open, but before send
+  xhr.setRequestHeader("Content-Type", contentType);
 
-    // request header must be set after open, but before send
-    request.setRequestHeader("Content-Type", options.contentType);
-
-    // set other headers
-    for (let k in options.headers) {
-      request.setRequestHeader(k, options.headers[k]);
-    }
-
-    // set overrideMimeType
-    if (options.overrideMimeType) {
-      request.overrideMimeType(options.overrideMimeType);
-    }
-
-    // handle the readystate, create the response, and call the callback
-    request.onreadystatechange = function () {
-      if (request.readyState == 4) {
-        response = Response.new(request);
-        errors.catchAndLog(function () {
-          self._emit('complete', response);
-        })();
-      }
-    }
-
-    // actually send the request. we only want to send data on POST requests
-    request.send(mode == "POST" ? data : null);
-  }
-
-  // Map these setters/getters to the options
-  ["url", "headers", "content", "contentType"].forEach(function (k) {
-    _public.__defineGetter__(k, function () options[k]);
-    _public.__defineSetter__(k, function (v) {
-      // This will automatically rethrow errors from apiUtils.validateOptions.
-      return options[k] = validator.validateSingleOption(k, v);
-    });
+  // set other headers
+  Object.keys(headers).forEach(function(name) {
+    xhr.setRequestHeader(name, headers[name]);
   });
 
-  // response should be available as a getter
-  _public.__defineGetter__("response", function () response);
+  // set overrideMimeType
+  if (overrideMimeType)
+    xhr.overrideMimeType(overrideMimeType);
 
-  _public.get = function () {
-    makeRequest("GET");
-    return this;
+  // handle the readystate, create the response, and call the callback
+  xhr.onreadystatechange = function onStateChange() {
+    if (xhr.readyState === 4) {
+      let response = internals(request).response = Response.new(xhr);
+      events._emit('complete', response);
+    }
   };
 
-  _public.post = function () {
-    makeRequest("POST");
-    return this;
-  };
-
-  return _public;
+  // actually send the request. we only want to send data on POST requests
+  xhr.send(mode === "POST" ? data : null);
 }
-exports.Request = Request;
+
+const Request = Base.extend({
+  initialize: function initialize(options) {
+    let request = internals(this);
+    let events = request.events = EventEmitter();
+    if ('onComplete' in options)
+      events.on('complete', options.onComplete);
+
+    let { url, headers, content, contentType, overrideMimeType } =
+      validator.validateOptions(options);
+
+    request.overrideMimeType = overrideMimeType;
+    request.url = url;
+    request.headers = headers;
+    request.content = content;
+    request.contentType = contentType;
+    request.response = null;
+  },
+  get url() internals(this).url,
+  set url(value) internals(this).url = validate('url', value),
+  get headers() internals(this).headers,
+  set headers(value) internals(this).url = validate('headers', value),
+  get content() internals(this).content,
+  set content(value) internals(this).content = validate('content', value),
+  get contentType() internals(this).contentType,
+  set contentType(value)
+    internals(this).contentType = validate('contentType', value),
+  get response() internals(this).response,
+  get: function get() {
+    send(this, 'GET');
+    return this;
+  },
+  post: function post() {
+    send(this, 'POST');
+    return this;
+  }
+});
+exports.Request = Class(Request);
 
 // Converts an object of unordered key-vals to a string that can be passed
 // as part of a request
