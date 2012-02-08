@@ -77,9 +77,8 @@ const Port = EventTarget.extend({
     // Set up a message event listener that will delegate to internal
     // `onMessage` property that can be set via public `onMessage` setter.
     this.on(message, function onMessage(data) {
-      let { onMessage } = port(this);
-      onMessage.call(this, data);
-    });
+      port(this).onMessage.call(this, data);
+    }.bind(this));
 
     // Finally we mark this port as alive, so that public methods / getters /
     // setters will behave accordingly.
@@ -124,6 +123,7 @@ function execute(f, self, params) {
   catch (error) {
     emit(self, 'error', error);
   }
+}
 
 /**
  * Exemplar implementing a workers global scope interface.
@@ -205,18 +205,21 @@ const WorkerScope = Base.extend(EventTarget, Port, {
           : null,
         contentScript = ('contentScript' in worker) ? worker.contentScript : null;
 
-    if (contentScriptFile) {
-      if (Array.isArray(contentScriptFile))
-        this._importScripts.apply(this, contentScriptFile);
+    let contentScriptFiles = Array.isArray(contentScriptFile) ? contentScriptFile
+                                                              : [ contentScriptFile ]
+
+    contentScriptFiles.forEach(execute.bind(null, function(contentScriptFile) {
+      let uri = URL(contentScriptFile);
+      if (uri.scheme === 'resource')
+        load(this, String(uri));
       else
-        this._importScripts(contentScriptFile);
-    }
-    if (contentScript) {
-      this._evaluate(
-        Array.isArray(contentScript) ? contentScript.join(';\n') : contentScript
-      );
-    }
-  },
+        throw Error('Unsupported `contentScriptFile` url: ' + String(uri));
+    }, this));
+
+    contentScript = Array.isArray(contentScript) ? contentScript.join(';\n')
+                                                 : contentScript;
+
+    execute(evaluate, this, contentScript, 'javascript:' + contentScript);
 
   /**
    * Alias to the global scope in the context of worker. Similar to
@@ -330,6 +333,8 @@ const Worker = Port.extend({
     // Set up an event listeners for `onError, onMessage, onDetach`.
     EventTarget.initialize.call(this, options);
 
+    // Internal feature that is only used by SDK unit tests.
+    // See `PRIVATE_KEY` definition for more information.
     model.expose_key = ('exposeUnlockKey' in options &&
                         options.exposeUnlockKey === PRIVATE_KEY);
 
