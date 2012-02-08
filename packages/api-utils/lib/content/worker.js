@@ -8,7 +8,7 @@
 const { Base } = require('../base');
 const { EventTarget } = require('../event/target');
 const { EventPort } = require('../event/port');
-const { Namespace: ns } = require('../namespace');
+const { ns } = require('../namespace');
 const { emit, on, off } = require('../event/core');
 const { Ci, Cu, Cc } = require('chrome');
 const { setTimeout, setInterval, clearTimeout, clearInterval } = require('../timer');
