@@ -18,6 +18,7 @@ const { getTabForWindow } = require("../tabs/tab");
 const { URL } = require('../url');
 const { when: unload } = require('../unload');
 const { guid } = require('../guid');
+const { merge } = require('../utils/object');
 const observers = require('../observer-service');
 const self = require("self");
 
@@ -154,7 +155,7 @@ const WorkerScope = Base.extend(EventTarget, Port, {
       wantXrays: true
     });
 
-    this.merge.call(instance, this, {
+    merge(instance, this, {
       new: undefined,
       initialize: undefined
     });
