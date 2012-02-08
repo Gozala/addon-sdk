@@ -10,6 +10,7 @@ const { EventTarget } = require('../event/target');
 const { EventPort } = require('../event/port');
 const { ns } = require('../namespace');
 const { emit, on, off } = require('../event/core');
+const { sandbox, evaluate, load } = require("../sandbox");
 const { Ci, Cu, Cc } = require('chrome');
 const { setTimeout, setInterval, clearTimeout, clearInterval } = require('../timer');
 const { getInnerId } = require('../window-utils');
@@ -56,37 +57,6 @@ let worker = ns({
  *   let xpcWrapper = proxyWrapper.valueOf(UNWRAP_ACCESS_KEY);
  */
 const PRIVATE_KEY = {};
-
-function ensureArgumentsAreJSON(array, window) {
-  // JSON.stringify is buggy with cross-sandbox values,
-  // it may return "{}" on functions. Use a replacer to match them correctly.
-  function replacer(k, v) {
-    return typeof v === "function" ? undefined : v;
-  }
-  // If a window is given, we use its `JSON.parse` object in order to
-  // create JS objects for its compartments (See bug 714891)
-  let parse = JSON.parse;
-  if (window) {
-    // As we can't directly rely on `window.wrappedJSObject.JSON`, we create
-    // a temporary sandbox in order to get access to a safe `JSON` object:
-    parse = Cu.Sandbox(window).JSON.parse;
-  }
-  return parse(JSON.stringify(array, replacer));
-}
-
-/**
- * Extended `EventEmitter` allowing us to emit events asynchronously.
- */
-const AsyncEventEmitter = EventEmitter.compose({
-  /**
-   * Emits event in the next turn of event loop.
-   */
-  _asyncEmit: function _asyncEmit() {
-    timer.setTimeout(function emitter(emit, scope, params) {
-      emit.apply(scope, params);
-    }, 0, this._emit, this, arguments)
-  }
-});
 
 const EMBRION = 0;
 const ALIVE = 1;
@@ -146,48 +116,13 @@ const Port = EventTarget.extend({
   }
 });
 
-/**
- * Evaluates given `code` in a given `source` worker as content script. If
- * exception occurs during evaluation `"error"` event will be emitted on the
- * given `source` worker.
- * @param {Object} source
- *    Worker to load code as content script.
- * @param {String} code
- *    JavaScript source to evaluate.
- * @param {String} [filename='javascript:' + code]
- *    Name of the file
- */
-function execute(source, code, uri) {
+function execute(f, self, params) {
   try {
-    evaluate(worker(source).sandbox, code, uri || 'javascript:' + code);
+    f.apply(self, params);
   }
   catch (error) {
-    emit('error', source, error);
+    emit(self, 'error', error);
   }
-};
-exports.evaluate = execute;
-
-/**
- * Loads script under the given `uri` into a worker as a content script.
- * If exception occurs during evaluation `"error"` event is emitted on the
- * given `source` worker.
- * @param {Object} source
- *    Worker to load content script into.
- * @param {String} uri
- *    URI of the script to load.
- */
-function loadScript(source, uri) {
-  let url = URI(uri);
-    if (uri.scheme === 'resource:') 
-      load(worker(source).sandbox, String(url));
-    else
-      throw Error('Unsupported `contentScriptFile` url:' + String(url));
-  }
-  catch (error) {
-    emit('error', source, error);
-  }
-};
-exports.loadScript = loadScript;
 
 /**
  * Exemplar implementing a workers global scope interface.
