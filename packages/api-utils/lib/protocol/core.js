@@ -7,7 +7,7 @@
 'use strict';
 
 const { Cc, Ci, CC } = require('chrome');
-const { Base } = require('../base');
+const { Class } = require('../heritage');
 const { Unknown } = require('../xpcom');
 const { ns } = require('../namespace');
 
@@ -25,7 +25,7 @@ const { newURI: URI, newChannel: URIChannel } =
 
 const response = ns({ stream: null });
 
-const Response = Base.extend({
+const Response = Class({
   initialize: function initialize(uri, stream) {
     // set internal stream property.
     response(this).stream = stream;
@@ -47,7 +47,8 @@ const Response = Base.extend({
   }
 });
 
-const CoreProtocol = Unknown.extend({
+const CoreProtocol = Class({
+  extends: Unknown,
   onRequest: function onRequest() {
     throw Error('Missing required property `onRequest`');
   },
@@ -57,7 +58,7 @@ const CoreProtocol = Unknown.extend({
     // We create `nsIPipe` which where response's output will be forwarded to.
     pipe = Pipe(true, true, 0, 0, null);
     request = { uri: uri.spec };
-    response = Response.new(request.uri, pipe.outputStream);
+    response = Response(request.uri, pipe.outputStream);
 
     this.onRequest(request, response);
 

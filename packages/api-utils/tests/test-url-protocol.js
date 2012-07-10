@@ -1,15 +1,16 @@
 "use strict";
 
+const { Class } = require('api-utils/heritage');
 const { Protocol } = require('api-utils/protocol/url');
 const { Service, unregister } = require('api-utils/xpcom');
 const { setTimeout } = require('api-utils/timer');
 const { XMLHttpRequest } = require('api-utils/xhr');
 
 function register(protocol) {
-  return Service.new({
+  return Service({
     contract: protocol.contract,
     description: protocol.description,
-    component: protocol
+    Component: protocol
   });
 }
 
@@ -37,7 +38,8 @@ function run() {
 
 exports['test uri handler must be registered'] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     scheme: 'register' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       requested ++;
@@ -68,7 +70,8 @@ exports['test uri handler must be registered'] = function(assert, done) {
 
 exports['test uri redirect'] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     scheme: 'register' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       requested ++;
@@ -91,7 +94,8 @@ exports['test uri redirect'] = function(assert, done) {
 
 exports['test uri async'] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends:Protocol,
     scheme: 'async' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       assert.equal(request.uri, uri, 'expected request uri');

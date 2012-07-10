@@ -1,15 +1,16 @@
 "use strict";
 
+const { Class } = require('api-utils/heritage');
 const { Protocol } = require('api-utils/protocol/about');
 const { Service, unregister } = require('api-utils/xpcom');
 const { setTimeout } = require('api-utils/timer');
 const { XMLHttpRequest } = require('api-utils/xhr');
 
 function register(protocol) {
-  return Service.new({
+  return Service({
     contract: protocol.contract,
     description: protocol.description,
-    component: protocol
+    Component: protocol
   });
 }
 
@@ -37,7 +38,8 @@ function run() {
 
 exports['test about handler must be registered'] = function (assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     what: 'register' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       response.uri = 'data:text/html,hello ' + this.what
@@ -67,7 +69,8 @@ exports['test about handler must be registered'] = function (assert, done) {
 
 exports["test about handler - redirect"] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     what: 'redirect' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       response.uri = 'data:text/html,hello ' + this.what
@@ -89,7 +92,8 @@ exports["test about handler - redirect"] = function(assert, done) {
 
 exports["test about handler - async"] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     what: 'async' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       response.contentType = 'text/html';

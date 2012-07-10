@@ -9,19 +9,16 @@
 const { Cc, Ci, CC } = require('chrome');
 const { newURI } = Cc['@mozilla.org/network/io-service;1'].
                   getService(Ci.nsIIOService);
+const { Class } = require('../heritage');
 const { Unknown } = require('../xpcom');
+const { override } = require('../util/objects');
 const { parse } = require('../url');
 
-// Implementation of nsIMutable
-const Mutable = Unknown.extend({
-  interfaces: [ 'nsIMutable' ],
-  mutable: true
-});
-exports.Mutable = Mutable;
 
 // Implements base exemplar for a `nsIURI` interface.
-const CustomURI = Unknown.extend({
-  initialize: function initialize(uri) this.merge(parse(uri)),
+const CustomURI = Class({
+  extends: Unknown,
+  initialize: function initialize(uri) override(this, parse(uri)),
   interfaces: [ 'nsIURI' ],
   originCharset: 'UTF-8',
   get asciiHost() this.host,
@@ -38,14 +35,16 @@ const CustomURI = Unknown.extend({
 });
 exports.CustomURI = CustomURI;
 
-const CustomURL = CustomURI.extend(Mutable, {
-  initialize: function initialize(uri) this.merge(parse(uri)),
+const CustomURL = Class({
+  extends: CustomURI,
+  initialize: function initialize(uri) override(this, parse(uri)),
   get userPass() this.password,
   get filePath() this.filepath,
   get fileName() this.filename,
   get fileBaseName() this.basename,
   get fileExtension() this.extension,
-  interfaces: [ 'nsIURL', 'nsIStandardURL' ],
+  interfaces: [ 'nsIURL', 'nsIStandardURL', 'nsIMutable' ],
+  mutable: true,
   classDescription: 'Custom URL',
   contractID: '@mozilla.org/network/custom-url;1',
   getCommonBaseSpec: function (uri) {},

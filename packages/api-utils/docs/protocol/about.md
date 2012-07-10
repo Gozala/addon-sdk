@@ -6,8 +6,10 @@ Module provide low level API for implementing custom 'about:' pages (like
 [about:robots](about:robots) for example). Module exports `Protocol` base
 exemplar that can be extended in order to implement custom page:
 
+    const { Class } = require('api-utils/heritage');
     const { Protocol } = require('api-utils/protocol/about');
-    Protocol.extend({
+    Class({
+      extends: Protocol,
       // ...
     });
 
@@ -17,8 +19,10 @@ You must implement `what` string property that will represent part of URI after
 `'about:'`. For example in order to register [about:foo](about:foo) page you
 need to implement `what` property with value `'foo'`:
 
+    const { Class } = require('api-utils/heritage');
     const { Protocol } = require('api-utils/protocol/about');
-    Protocol.extend({
+    Class({
+      extends: Protocol,
       what: 'foo',
       // ...
     });
@@ -28,8 +32,10 @@ need to implement `what` property with value `'foo'`:
 Easiest way to define 'about:' style page is to redirect request to a different
 page URL:
 
+    const { Class } = require('api-utils/heritage');
     const { Protocol } = require('api-utils/protocol/about');
-    let foo = Protocol.extend({
+    let foo = Class({
+      extends: Protocol,
       what: 'foo',
       onRequest: function onRequest(request, response) {
         console.log(request.uri);  // => about:foo
@@ -44,9 +50,11 @@ page URL:
 
 It is also possible to generate and write responses on incoming requests:
 
+    const { Class } = require('api-utils/heritage');
     const { Protocol } = require('api-utils/protocol/about');
     let n = 0
-    let bar = Protocol.extend({
+    let bar = Class({
+      extends: Protocol,
       what: 'bar',
       onRequest: function onRequest(request, response) {
         console.log(request.uri);  // => about:bar
@@ -59,9 +67,11 @@ It is also possible to generate and write responses on incoming requests:
 
 Asynchronous streaming of responses is also possible:
 
+    const { Class } = require('api-utils/heritage');
     const { Protocol } = require('api-utils/protocol/about');
     const { setTimeout } = require('timers');
-    Protocol.extend({
+    Class({
+      extends: Protocol,
       what: 'bar',
       onRequest: function onRequest(request, response) {
         response.write('hello\n')
@@ -79,9 +89,11 @@ page loads.
 In addition there are some more advanced `response` properties that can be
 tweaked to give a browser more hints about the content:
 
+    const { Class } = require('api-utils/heritage');
     const { Protocol } = require('api-utils/protocol/about');
     const { setTimeout } = require('timers');
-    Protocol.extend({
+    Class({
+      extends: Protocol,
       what: 'bar',
       onRequest: function onRequest(request, response) {
         response.contentType = 'text/html';
@@ -101,8 +113,9 @@ original page had.
 In order to make protocol available to the runtime it must be registered. SDK's
 **xpcom** module can be used to do this:
 
+    const { Class } = require('api-utils/heritage');
     const { Service } = require('api-utils/xpcom');
-    let protocol = Protocol.extend({ /*...*/ });
+    let protocol = Class({ extends: Protocol, /*...*/ });
     Service.new({
       contract: protocol.contract,
       description: protocol.description,

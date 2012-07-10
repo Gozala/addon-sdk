@@ -6,6 +6,7 @@
 
 'use strict';
 
+const { Class } = require('api-utils/heritage');
 const { Protocol } = require('api-utils/protocol/url');
 const { Service, register, unregister } = require('api-utils/xpcom');
 const { setTimeout } = require('api-utils/timer');
@@ -48,7 +49,8 @@ exports['test protocol handler dirs'] = function(assert, done) {
     md: 'hello world'
   };
 
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     scheme: 'map' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       requested ++;
@@ -73,8 +75,8 @@ exports['test protocol handler dirs'] = function(assert, done) {
     }
   });
 
-  let service = Service.new({
-    component: protocol,
+  let service = Service({
+    Component: protocol,
     contract: protocol.contract,
     description: protocol.description
   })
