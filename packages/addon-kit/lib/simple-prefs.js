@@ -2,72 +2,32 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const { Cc, Ci } = require("chrome");
-const observers = require("observer-service");
-const { EventEmitter } = require("events");
-const unload = require("unload");
-const prefService = require("preferences-service");
-const { jetpackID } = require("@packaging");
+"use strict";
 
-const ADDON_BRANCH = "extensions." + jetpackID + ".";
-const BUTTON_PRESSED = jetpackID + "-cmdPressed";
+const { emit, off } = require("api-utils/event/core");
+const { when: unload } = require("api-utils/unload");
+const { PrefsTarget } = require("api-utils/prefs/target");
+const { id } = require("self");
+const observers = require("api-utils/observer-service");
+
+const ADDON_BRANCH = "extensions." + id + ".";
+const BUTTON_PRESSED = id + "-cmdPressed";
 
 // XXX Currently, only Firefox implements the inline preferences.
-if (!require("xul-app").is("Firefox"))
+if (!require("api-utils/xul-app").is("Firefox"))
   throw Error("This API is only supported in Firefox");
 
-let branch = Cc["@mozilla.org/preferences-service;1"].
-             getService(Ci.nsIPrefService).
-             getBranch(ADDON_BRANCH).
-             QueryInterface(Ci.nsIPrefBranch2);
+const target = PrefsTarget({ branchName: ADDON_BRANCH });
 
-const events = EventEmitter.compose({
-  constructor: function Prefs() {
-    // Log unhandled errors.
-    this.on("error", console.exception.bind(console));
+// Listen to clicks on buttons
+function buttonClick(subject, data) {
+  emit(target, data);
+}
+observers.add(BUTTON_PRESSED, buttonClick);
 
-    // Make sure we remove all the listeners
-    unload.ensure(this);
-
-    this._prefObserver = this._prefObserver.bind(this);
-    this._buttonObserver = this._buttonObserver.bind(this);
-
-    // Listen to changes in the preferences
-    branch.addObserver("", this._prefObserver, false);
-
-    // Listen to clicks on buttons
-    observers.add(BUTTON_PRESSED, this._buttonObserver, this);
-  },
-  _prefObserver: function PrefsPrefObserver(subject, topic, prefName) {
-    if (topic == "nsPref:changed") {
-      this._emit(prefName, prefName);
-    }
-  },
-  _buttonObserver: function PrefsButtonObserver(subject, data) {
-    this._emit(data);
-  },
-  unload: function manager_unload() {
-    this._removeAllListeners();
-    branch.removeObserver("", this._prefObserver);
- },
-})();
-
-const simple = Proxy.create({
-  get: function(receiver, pref) {
-    return prefService.get(ADDON_BRANCH + pref);
-  },
-  set: function(receiver, pref, val) {
-    prefService.set(ADDON_BRANCH + pref, val);
-  },
-  delete: function(pref) {
-    prefService.reset(ADDON_BRANCH + pref);
-    return true;
-  },
-  has: function(pref) {
-    return prefService.has(ADDON_BRANCH + pref);
-  }
+// Make sure we cleanup listeners on unload.
+unload(function() {
+  observers.remove(BUTTON_PRESSED, buttonClick);
 });
 
-exports.on = events.on;
-exports.removeListener = events.removeListener;
-exports.prefs = simple;
+module.exports = target;
