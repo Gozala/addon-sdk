@@ -10,6 +10,7 @@ const { Cc, Ci, CC } = require('chrome');
 const { Class } = require('../heritage');
 const { Unknown } = require('../xpcom');
 const { ns } = require('../namespace');
+const { override } = require('../utils/object');
 
 const Pipe = CC('@mozilla.org/pipe;1', 'nsIPipe', 'init');
 const Channel = CC('@mozilla.org/network/input-stream-channel;1',
@@ -29,7 +30,7 @@ const Response = Class({
   initialize: function initialize(uri, stream) {
     // set internal stream property.
     response(this).stream = stream;
-    this.merge({
+    override(this, {
       uri: uri,
       originalURI: uri,
       principalURI: uri,
