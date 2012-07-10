@@ -475,7 +475,7 @@ Object.keys(parseTests).forEach(function(name) {
     let expected = parseTests[name];
     Object.keys(expected).forEach(function(key) {
       test.assertEqual(actual[key], expected[key],
-                       'proprety ' + key + ' is correct');
+                       'property ' + key + ' is correct');
     });
   };
 });
