@@ -8,8 +8,8 @@ const { XMLHttpRequest } = require('api-utils/xhr');
 
 function register(protocol) {
   return Service({
-    contract: protocol.contract,
-    description: protocol.description,
+    contract: protocol.prototype.contract,
+    description: protocol.prototype.description,
     Component: protocol
   });
 }
@@ -47,7 +47,7 @@ exports['test uri handler must be registered'] = function(assert, done) {
       response.uri = 'data:text/html,done'
     }
   });
-  let uri = protocol.scheme + '://root/index.html'
+  let uri = protocol.prototype.scheme + '://root/index.html'
 
   assert.throws(function() {
     readURI(url)();
@@ -79,7 +79,7 @@ exports['test uri redirect'] = function(assert, done) {
       response.uri = 'data:text/html,done'
     }
   });
-  let uri = protocol.scheme + '://root/index.html';
+  let uri = protocol.prototype.scheme + '://root/index.html';
 
   let service = register(protocol);
   readURI(uri)(function ({ responseText, status }) {
@@ -110,7 +110,7 @@ exports['test uri async'] = function(assert, done) {
   });
   let service = register(protocol);
 
-  let uri = protocol.scheme + '://root/index.html'
+  let uri = protocol.prototype.scheme + '://root/index.html'
   readURI(uri)(function ({ responseText, status }) {
     assert.equal(status, 0, 'request was sucessful');
     assert.equal(requested, 1, 'request was handled');

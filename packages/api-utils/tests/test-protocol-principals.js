@@ -77,12 +77,12 @@ exports['test protocol handler dirs'] = function(assert, done) {
 
   let service = Service({
     Component: protocol,
-    contract: protocol.contract,
-    description: protocol.description
+    contract: protocol.prototype.contract,
+    description: protocol.prototype.description
   })
 
   let mod = PageMod({
-    include: protocol.scheme + '://foo/index.html',
+    include: protocol.prototype.scheme + '://foo/index.html',
     contentScript: 'new ' + function() {
       setTimeout(function () {
         self.postMessage(document.body.textContent);
@@ -99,7 +99,7 @@ exports['test protocol handler dirs'] = function(assert, done) {
     }
   });
 
-  tabs.open(protocol.scheme + '://foo/index.html');
+  tabs.open(protocol.prototype.scheme + '://foo/index.html');
 };
 
 require('test').run(exports);

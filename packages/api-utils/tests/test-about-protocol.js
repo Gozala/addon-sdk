@@ -8,8 +8,8 @@ const { XMLHttpRequest } = require('api-utils/xhr');
 
 function register(protocol) {
   return Service({
-    contract: protocol.contract,
-    description: protocol.description,
+    contract: protocol.prototype.contract,
+    description: protocol.prototype.description,
     Component: protocol
   });
 }
@@ -48,18 +48,18 @@ exports['test about handler must be registered'] = function (assert, done) {
   });
 
   assert.throws(function() {
-    readURI('about:' + protocol.what)();
+    readURI('about:' + protocol.prototype.what)();
   }, 'protocol is not register');
 
   let service = register(protocol);
 
-  readURI('about:' + protocol.what)(function ({ responseText, status }) {
+  readURI('about:' + protocol.prototype.what)(function ({ responseText, status }) {
     assert.equal(status, 0, 'request was sucessful');
 
     unregister(service);
 
     assert.throws(function() {
-      readURI('about:' + protocol.what)();
+      readURI('about:' + protocol.prototype.what)();
     }, 'protocol is unregistered');
 
     assert.equal(requested, 1, 'request was handled');
@@ -79,9 +79,9 @@ exports["test about handler - redirect"] = function(assert, done) {
   });
   let service = register(protocol);
 
-  readURI('about:' + protocol.what)(function ({ responseText, status }) {
+  readURI('about:' + protocol.prototype.what)(function ({ responseText, status }) {
     assert.equal(status, 0, 'request was sucessful');
-    assert.equal(responseText, 'hello ' + protocol.what,
+    assert.equal(responseText, 'hello ' + protocol.prototype.what,
                  'response content is correct');
 
     unregister(service);
@@ -100,15 +100,15 @@ exports["test about handler - async"] = function(assert, done) {
       response.write('hello\n')
       setTimeout(function() {
         requested ++;
-        response.end(protocol.what);
+        response.end(protocol.prototype.what);
       }, 100);
     }
   });
 
   let service = register(protocol);
-  readURI('about:' + protocol.what)(function({ responseText, status }) {
+  readURI('about:' + protocol.prototype.what)(function({ responseText, status }) {
     assert.equal(status, 0, 'request was sucessful');
-    assert.equal(responseText, 'hello\n' + protocol.what,
+    assert.equal(responseText, 'hello\n' + protocol.prototype.what,
                  'response content is correct');
     assert.equal(requested, 1, 'request was handled');
 
