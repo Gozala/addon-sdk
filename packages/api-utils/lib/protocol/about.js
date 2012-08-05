@@ -6,11 +6,13 @@
 
 'use strict';
 
+const { Class } = require('../heritage');
 const { CoreProtocol } = require('./core');
 const { ALLOW_SCRIPT, URI_SAFE_FOR_UNTRUSTED_CONTENT,
         HIDE_FROM_ABOUTABOUT } = require('chrome').Ci.nsIAboutModule;
 
-const Protocol = CoreProtocol.extend({
+const Protocol = Class({
+  extends: CoreProtocol,
   get what() { throw Error('Missing required property `what`'); },
   interfaces: [ 'nsIAboutModule' ],
   // A flag that indicates whether script should be enabled for the given
@@ -33,7 +35,7 @@ const Protocol = CoreProtocol.extend({
     return (
       this.allowScript ? ALLOW_SCRIPT : 0 |
       this.allowUnsafeLinks ? URI_SAFE_FOR_UNTRUSTED_CONTENT : 0 |
-      this.allowListing ? HIDE_FROM_ABOUTABOUT : 0);
+      this.allowListing ? 0 : HIDE_FROM_ABOUTABOUT);
   }
 });
 exports.Protocol = Protocol;

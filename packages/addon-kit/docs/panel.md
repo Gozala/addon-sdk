@@ -61,6 +61,43 @@ method exported by the
 
     panel.show();
 
+## Updating Panel Content ##
+
+You can update the panel's content simply by setting the panel's `contentURL`
+property.
+
+Here's an add-on that adds two widgets to the add-on bar, one which
+shows Google's mobile site and one which shows Bing's mobile site. The widgets
+share a panel object, and switch between the two sites by updating the panel's
+`contentURL` property:
+
+    var panel = require("panel").Panel({
+      contentURL: "about:blank",
+      onHide: function () {
+        panel.contentURL = "about:blank";
+      }
+    });
+
+    require("widget").Widget({
+      id: "bing",
+      label: "Bing",
+      contentURL: "http://www.bing.com/favicon.ico",
+      panel: panel,
+      onClick: function() {
+        panel.contentURL = "http://m.bing.com/";
+      }
+    });
+
+    require("widget").Widget({
+      id: "google",
+      label: "Google",
+      contentURL: "http://www.google.com/favicon.ico",
+      panel: panel,
+      onClick: function() {
+        panel.contentURL = "http://www.google.com/xhtml";
+      }
+    });
+
 ## Scripting Panel Content ##
 
 You can't directly access your panel's content from your main add-on code.
@@ -77,9 +114,9 @@ have to send messages between the content script and the main add-on code.
 [`Panel()` constructor](packages/addon-kit/panel.html#Panel%28options%29).
 
 * You can communicate with the script using either the
-[`postMessage()`](dev-guide/addon-development/content-scripts/using-postmessage.html)
+[`postMessage()`](dev-guide/guides/content-scripts/using-postmessage.html)
 API or (preferably, usually) the
-[`port`](dev-guide/addon-development/content-scripts/using-port.html) API.
+[`port`](dev-guide/guides/content-scripts/using-port.html) API.
 
 For example, here's an add-on whose content script intercepts mouse clicks
 on links inside the panel, and sends the target URL to the main add-on
@@ -220,7 +257,7 @@ Finally, the "text-entry.html" file defines the `<textarea>` element:
 </pre>
 
 To learn much more about content scripts, see the
-[Working with Content Scripts](dev-guide/addon-development/web-content.html)
+[Working with Content Scripts](dev-guide/guides/content-scripts/index.html)
 guide.
 
 <div class="experimental">
@@ -240,9 +277,9 @@ you can just include a script from the HTML file in the normal way, using
 
 Like a content script, these scripts can communicate with the add-on code
 using the
-[`postMessage()`](dev-guide/addon-development/content-scripts/using-postmessage.html)
+[`postMessage()`](dev-guide/guides/content-scripts/using-postmessage.html)
 API or the
-[`port`](dev-guide/addon-development/content-scripts/using-port.html) API.
+[`port`](dev-guide/guides/content-scripts/using-port.html) API.
 The crucial difference is that these scripts access the `postMessage`
 and `port` objects through the `addon` object, whereas content scripts
 access them through the `self` object.
@@ -399,6 +436,11 @@ Creates a panel.
     fires
 
     This property is optional and defaults to "end".
+  @prop [contentScriptOptions] {object}
+    Read-only value exposed to content scripts under `self.options` property.
+
+    Any kind of jsonable value (object, array, string, etc.) can be used here.
+    Optional.
 
   @prop [onMessage] {function}
     Include this to listen to the panel's `message` event.
@@ -416,7 +458,7 @@ Creates a panel.
 * receive events from the content script using the `port.on` function
 
 See the guide to
-<a href="dev-guide/addon-development/content-scripts/using-port.html">
+<a href="dev-guide/guides/content-scripts/using-port.html">
 communicating using <code>port</code></a> for details.
 </api>
 
@@ -437,7 +479,9 @@ The width of the panel in pixels.
 
 <api name="contentURL">
 @property {string}
-The URL of the content loaded in the panel.
+The URL of content loaded into the panel.  This can point to
+local content loaded from your add-on's "data" directory or remote content.
+Setting it updates the panel's content immediately.
 </api>
 
 <api name="allow">
@@ -478,6 +522,14 @@ images) for the panel has been loaded, at the time the
 [window.onload event](https://developer.mozilla.org/en/DOM/window.onload)
 fires
 
+</api>
+
+<api name="contentScriptOptions">
+@property {object}
+Read-only value exposed to content scripts under `self.options` property.
+
+Any kind of jsonable value (object, array, string, etc.) can be used here.
+Optional.
 </api>
 
 <api name="destroy">
@@ -551,7 +603,7 @@ code in the panel's `message` event.
 @argument {value}
 Listeners are passed a single argument which is the message posted
 from the content script. The message can be any
-<a href = "dev-guide/addon-development/content-scripts/using-port.html#json_serializable">JSON-serializable value</a>.
+<a href = "dev-guide/guides/content-scripts/using-port.html#json_serializable">JSON-serializable value</a>.
 </api>
 
 <api name="error">

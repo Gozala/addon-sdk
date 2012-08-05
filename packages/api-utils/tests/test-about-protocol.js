@@ -1,15 +1,16 @@
 "use strict";
 
+const { Class } = require('api-utils/heritage');
 const { Protocol } = require('api-utils/protocol/about');
 const { Service, unregister } = require('api-utils/xpcom');
 const { setTimeout } = require('api-utils/timer');
 const { XMLHttpRequest } = require('api-utils/xhr');
 
 function register(protocol) {
-  return Service.new({
-    contract: protocol.contract,
-    description: protocol.description,
-    component: protocol
+  return Service({
+    contract: protocol.prototype.contract,
+    description: protocol.prototype.description,
+    Component: protocol
   });
 }
 
@@ -37,7 +38,8 @@ function run() {
 
 exports['test about handler must be registered'] = function (assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     what: 'register' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       response.uri = 'data:text/html,hello ' + this.what
@@ -46,18 +48,18 @@ exports['test about handler must be registered'] = function (assert, done) {
   });
 
   assert.throws(function() {
-    readURI('about:' + protocol.what)();
+    readURI('about:' + protocol.prototype.what)();
   }, 'protocol is not register');
 
   let service = register(protocol);
 
-  readURI('about:' + protocol.what)(function ({ responseText, status }) {
+  readURI('about:' + protocol.prototype.what)(function ({ responseText, status }) {
     assert.equal(status, 0, 'request was sucessful');
 
     unregister(service);
 
     assert.throws(function() {
-      readURI('about:' + protocol.what)();
+      readURI('about:' + protocol.prototype.what)();
     }, 'protocol is unregistered');
 
     assert.equal(requested, 1, 'request was handled');
@@ -67,7 +69,8 @@ exports['test about handler must be registered'] = function (assert, done) {
 
 exports["test about handler - redirect"] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     what: 'redirect' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       response.uri = 'data:text/html,hello ' + this.what
@@ -76,9 +79,9 @@ exports["test about handler - redirect"] = function(assert, done) {
   });
   let service = register(protocol);
 
-  readURI('about:' + protocol.what)(function ({ responseText, status }) {
+  readURI('about:' + protocol.prototype.what)(function ({ responseText, status }) {
     assert.equal(status, 0, 'request was sucessful');
-    assert.equal(responseText, 'hello ' + protocol.what,
+    assert.equal(responseText, 'hello ' + protocol.prototype.what,
                  'response content is correct');
 
     unregister(service);
@@ -89,22 +92,23 @@ exports["test about handler - redirect"] = function(assert, done) {
 
 exports["test about handler - async"] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     what: 'async' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       response.contentType = 'text/html';
       response.write('hello\n')
       setTimeout(function() {
         requested ++;
-        response.end(protocol.what);
+        response.end(protocol.prototype.what);
       }, 100);
     }
   });
 
   let service = register(protocol);
-  readURI('about:' + protocol.what)(function({ responseText, status }) {
+  readURI('about:' + protocol.prototype.what)(function({ responseText, status }) {
     assert.equal(status, 0, 'request was sucessful');
-    assert.equal(responseText, 'hello\n' + protocol.what,
+    assert.equal(responseText, 'hello\n' + protocol.prototype.what,
                  'response content is correct');
     assert.equal(requested, 1, 'request was handled');
 

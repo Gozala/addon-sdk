@@ -4,6 +4,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 "use strict";
+
+const memory = require('api-utils/memory');
 var timer = require("./timer");
 
 exports.findAndRunTests = function findAndRunTests(options) {
@@ -41,6 +43,8 @@ TestRunner.prototype = {
   PAUSE_DELAY: 500,
 
   _logTestFailed: function _logTestFailed(why) {
+    if (!(why in this.test.errors))
+      this.test.errors[why] = 0;
     this.test.errors[why]++;
     if (!this.testFailureLogged) {
       this.console.error("TEST FAILED: " + this.test.name + " (" + why + ")");

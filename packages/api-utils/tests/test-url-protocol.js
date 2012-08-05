@@ -1,15 +1,16 @@
 "use strict";
 
+const { Class } = require('api-utils/heritage');
 const { Protocol } = require('api-utils/protocol/url');
 const { Service, unregister } = require('api-utils/xpcom');
 const { setTimeout } = require('api-utils/timer');
 const { XMLHttpRequest } = require('api-utils/xhr');
 
 function register(protocol) {
-  return Service.new({
-    contract: protocol.contract,
-    description: protocol.description,
-    component: protocol
+  return Service({
+    contract: protocol.prototype.contract,
+    description: protocol.prototype.description,
+    Component: protocol
   });
 }
 
@@ -37,7 +38,8 @@ function run() {
 
 exports['test uri handler must be registered'] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     scheme: 'register' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       requested ++;
@@ -45,7 +47,7 @@ exports['test uri handler must be registered'] = function(assert, done) {
       response.uri = 'data:text/html,done'
     }
   });
-  let uri = protocol.scheme + '://root/index.html'
+  let uri = protocol.prototype.scheme + '://root/index.html'
 
   assert.throws(function() {
     readURI(url)();
@@ -68,7 +70,8 @@ exports['test uri handler must be registered'] = function(assert, done) {
 
 exports['test uri redirect'] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends: Protocol,
     scheme: 'register' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       requested ++;
@@ -76,7 +79,7 @@ exports['test uri redirect'] = function(assert, done) {
       response.uri = 'data:text/html,done'
     }
   });
-  let uri = protocol.scheme + '://root/index.html';
+  let uri = protocol.prototype.scheme + '://root/index.html';
 
   let service = register(protocol);
   readURI(uri)(function ({ responseText, status }) {
@@ -91,7 +94,8 @@ exports['test uri redirect'] = function(assert, done) {
 
 exports['test uri async'] = function(assert, done) {
   let requested = 0;
-  let protocol = Protocol.extend({
+  let protocol = Class({
+    extends:Protocol,
     scheme: 'async' + new Date().getTime().toString(36),
     onRequest: function onRequest(request, response) {
       assert.equal(request.uri, uri, 'expected request uri');
@@ -106,7 +110,7 @@ exports['test uri async'] = function(assert, done) {
   });
   let service = register(protocol);
 
-  let uri = protocol.scheme + '://root/index.html'
+  let uri = protocol.prototype.scheme + '://root/index.html'
   readURI(uri)(function ({ responseText, status }) {
     assert.equal(status, 0, 'request was sucessful');
     assert.equal(requested, 1, 'request was handled');

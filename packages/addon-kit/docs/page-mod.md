@@ -27,7 +27,7 @@ Like all modules that interact with web content, page-mod uses content
 scripts that execute in the content process and defines a messaging API to
 communicate between the content scripts and the main add-on script. For more
 details on content scripting see the tutorial on [interacting with web
-content](dev-guide/addon-development/web-content.html).
+content](dev-guide/guides/content-scripts/index.html).
 
 To create a PageMod the add-on developer supplies:
 
@@ -81,7 +81,7 @@ file in your `data` directory as "myScript.js", you would assign it using
 code like:
 
     var data = require("self").data;
-    
+
     var pageMod = require("page-mod");
     pageMod.PageMod({
       include: "*.org",
@@ -97,6 +97,65 @@ have problems getting your add-on approved on AMO.</p>
 <code>contentScriptFile</code>. This makes your code easier to maintain,
 secure, debug and review.</p>
 </div>
+
+### Styling web pages ###
+
+Sometimes adding a script to web pages is not enough, you also want to style
+them. `PageMod` provides an easy way to do that through options' `contentStyle`
+and `contentStyleFile` properties:
+
+    var data = require("self").data;
+    var pageMod = require("page-mod");
+
+    pageMod.PageMod({
+      include: "*.org",
+
+      contentStyleFile: data.url("my-page-mod.css"),
+      contentStyle: [
+        "div { padding: 10px; border: 1px solid silver}",
+        "img { display: none}"
+      ]
+    })
+
+`PageMod` will add these styles as
+[user style sheets](https://developer.mozilla.org/en/CSS/Getting_Started/Cascading_and_inheritance).
+
+#### Working with Relative URLs in CSS Rules ####
+
+You can't currently use relative URLs in style sheets loaded in this way.
+For example, consider a CSS file that references an external file like this:
+
+    background: rgb(249, 249, 249) url('../../img/my-background.png') repeat-x top center;
+
+If you attach this file using `contentStyleFile`, "my-background.png"
+will not be found.
+
+As a workaround for this, you can build an absolute URL to a file in your
+"data" directory, and construct a `contentStyle` option embedding that URL
+in your rule. For example:
+
+    var data = require("self").data;
+
+    var pageMod = require("page-mod").PageMod({
+      include: "*",
+      contentStyleFile: data.url("my-style.css"),
+      // contentStyle is built dynamically here to include an absolute URL
+      // for the file referenced by this CSS rule.
+      // This workaround is needed because we can't use relative URLs
+      // in contentStyleFile or contentStyle.
+      contentStyle: "h1 { background: url(" + data.url("my-pic.jpg") + ")}"
+    });
+
+This add-on uses a separate file "my-style.css", loaded using
+`contentStyleFile`, for all CSS rules except those that reference
+an external file. For the rule that needs to refer to "my-pic.jpg",
+which is stored in the add-on's "data" directory, it uses `contentStyle`.
+
+Dynamically constructing code strings like those assigned to `contentScript`
+or `contentStyle` is usually considered an unsafe practice that may cause an
+add-on to fail AMO review. In this case it is safe, and should be allowed,
+but including a comment like that in the example above will help to
+prevent any misunderstanding.
 
 ## Communicating With Content Scripts ##
 
@@ -330,6 +389,20 @@ Creates a PageMod.
     fires
 
     This property is optional and defaults to "end".
+  @prop [contentScriptOptions] {object}
+    Read-only value exposed to content scripts under `self.options` property.
+
+    Any kind of jsonable value (object, array, string, etc.) can be used here.
+    Optional.
+
+  @prop [contentStyleFile] {string,array}
+    The local file URLs of stylesheet to load. Content style specified by this
+    option are loaded *before* those specified by the `contentStyle` option.
+    Optional.
+  @prop [contentStyle] {string,array}
+    The texts of stylesheet rules to add. Content styles specified by this
+    option are loaded *after* those specified by the `contentStyleFile` option.
+    Optional.
 
   @prop [onAttach] {function}
 A function to call when the PageMod attaches content scripts to
@@ -353,7 +426,8 @@ description of match patterns. Rules can be added to the list by calling its
 @method
 Stops the page mod from making any more modifications.  Once destroyed the page
 mod can no longer be used.  Note that modifications already made to open pages
-will not be undone.
+will not be undone, except for any stylesheet added by `contentStyle` or
+`contentStyleFile`, that are unregistered immediately.
 </api>
 
 <api name="attach">

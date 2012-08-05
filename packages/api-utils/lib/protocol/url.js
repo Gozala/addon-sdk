@@ -7,8 +7,9 @@
 'use strict';
 
 const { Ci, CC } = require('chrome');
+const { Class } = require('../heritage');
 const { CoreProtocol } = require('./core');
-const { pick } = require('../utils/object');
+const { pick, extend } = require('../utils/object');
 
 const StandardURL = CC('@mozilla.org/network/standard-url;1',
                        'nsIStandardURL', 'init');
@@ -23,7 +24,8 @@ const Flags = pick([ 'URI_STD', 'URI_NORELATIVE', 'URI_NOAUTH',
 const URITypes = pick([ 'URLTYPE_STANDARD', 'URLTYPE_AUTHORITY',
   'URLTYPE_NO_AUTHORITY' ], Ci.nsIStandardURL);
 
-const Protocol = CoreProtocol.extend(Flags, URITypes, {
+const Protocol = Class(extend(Flags, URITypes, {
+  extends: CoreProtocol,
   get scheme() { throw Error('Missing required `scheme` property.'); },
   interfaces: [ 'nsIProtocolHandler' ],
   get description() {
@@ -49,5 +51,5 @@ const Protocol = CoreProtocol.extend(Flags, URITypes, {
     url.QueryInterface(Ci.nsIURL);
     return url;
   }
-});
+}));
 exports.Protocol = Protocol;

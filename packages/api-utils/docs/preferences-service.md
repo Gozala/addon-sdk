@@ -53,6 +53,13 @@ preference is set.
 </api>
 
 
+<api name="keys">
+@function
+@param root {string} Preference root name.
+@returns {array} Returns an array of strings representing the child preferences of the root of this branch.
+</api>
+
+
 <api name="isSet">
 @function
 @param name {string} Preference name.
@@ -74,7 +81,7 @@ acting on the user's behalf).
 @function
 Clears a non-default, user-set value from the application preference
 `name`. If no user-set value is defined on `name`, the function
-does nothing.
+does nothing. If no default value exists the preference will cease to exist.
 @param name {string} Preference name.
 
 **Example:**

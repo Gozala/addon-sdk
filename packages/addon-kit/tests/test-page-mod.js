@@ -6,8 +6,9 @@
 
 var pageMod = require("page-mod");
 var testPageMod = require("pagemod-test-helpers").testPageMod;
-const { Loader } = require('./helpers');
+const { Loader } = require('test-harness/loader');
 const tabs = require("tabs");
+const timer = require("timer");
 
 /* XXX This can be used to delay closing the test Firefox instance for interactive
  * testing or visual inspection. This test is registered first so that it runs
@@ -15,7 +16,7 @@ const tabs = require("tabs");
 exports.delay = function(test) {
   if (false) {
     test.waitUntilDone(60000);
-    require("timer").setTimeout(function() {test.done();}, 4000);
+    timer.setTimeout(function() {test.done();}, 4000);
   } else
     test.pass();
 }
@@ -180,7 +181,7 @@ exports.testCommunication2 = function(test) {
   let callbackDone = null,
       window;
 
-  testPageMod(test, "about:credits", [{
+  testPageMod(test, "about:license", [{
       include: "about:*",
       contentScriptWhen: 'start',
       contentScript: 'new ' + function WorkerScope() {
@@ -267,7 +268,7 @@ exports.testMixedContext = function(test) {
   let doneCallback = null;
   let messages = 0;
   let modObject = {
-    include: "data:text/html,",
+    include: "data:text/html;charset=utf-8,",
     contentScript: 'new ' + function WorkerScope() {
       // Both scripts will execute this,
       // context is shared if one script see the other one modification.
@@ -288,7 +289,7 @@ exports.testMixedContext = function(test) {
       });
     }
   };
-  testPageMod(test, "data:text/html,", [modObject, modObject],
+  testPageMod(test, "data:text/html;charset=utf-8,", [modObject, modObject],
     function(win, done) {
       doneCallback = done;
     }
@@ -354,12 +355,12 @@ exports['test tab worker on message'] = function(test) {
   let tabs = require("tabs");
   let { PageMod } = require("page-mod");
 
-  let url1 = "data:text/html,<title>tab1</title><h1>worker1.tab</h1>";
-  let url2 = "data:text/html,<title>tab2</title><h1>worker2.tab</h1>";
+  let url1 = "data:text/html;charset=utf-8,<title>tab1</title><h1>worker1.tab</h1>";
+  let url2 = "data:text/html;charset=utf-8,<title>tab2</title><h1>worker2.tab</h1>";
   let worker1 = null;
 
   let mod = PageMod({
-    include: "data:text/html,*",
+    include: "data:text/html*",
     contentScriptWhen: "ready",
     contentScript: "self.postMessage('#1');",
     onAttach: function onAttach(worker) {
@@ -394,7 +395,7 @@ exports['test tab worker on message'] = function(test) {
 exports.testAutomaticDestroy = function(test) {
   test.waitUntilDone();
   let loader = Loader(module);
-  
+
   let pageMod = loader.require("page-mod").PageMod({
     include: "about:*",
     contentScriptWhen: "start",
@@ -402,10 +403,10 @@ exports.testAutomaticDestroy = function(test) {
       test.fail("Page-mod should have been detroyed during module unload");
     }
   });
-  
+
   // Unload the page-mod module so that our page mod is destroyed
   loader.unload();
- 
+
   // Then create a second tab to ensure that it is correctly destroyed
   let tabs = require("tabs");
   tabs.open({
@@ -416,5 +417,137 @@ exports.testAutomaticDestroy = function(test) {
       test.done();
     }
   });
-  
+
 }
+
+exports.testContentScriptOptionsOption = function(test) {
+	test.waitUntilDone();
+
+  let callbackDone = null;
+  testPageMod(test, "about:", [{
+      include: "about:*",
+      contentScript: "self.postMessage( [typeof self.options.d, self.options] );",
+      contentScriptWhen: "end",
+      contentScriptOptions: {a: true, b: [1,2,3], c: "string", d: function(){ return 'test'}},
+      onAttach: function(worker) {
+        worker.on('message', function(msg) {
+          test.assertEqual( msg[0], 'undefined', 'functions are stripped from contentScriptOptions' );
+          test.assertEqual( typeof msg[1], 'object', 'object as contentScriptOptions' );
+          test.assertEqual( msg[1].a, true, 'boolean in contentScriptOptions' );
+          test.assertEqual( msg[1].b.join(), '1,2,3', 'array and numbers in contentScriptOptions' );
+          test.assertEqual( msg[1].c, 'string', 'string in contentScriptOptions' );
+          callbackDone();
+        });
+      }
+    }],
+    function(win, done) {
+      callbackDone = done;
+    }
+  );
+};
+
+exports.testPageModCss = function(test) {
+  let [pageMod] = testPageMod(test,
+    'data:text/html;charset=utf-8,<div style="background: silver">css test</div>', [{
+      include: "data:*",
+      contentStyle: "div { height: 100px; }",
+      contentStyleFile:
+        require("self").data.url("pagemod-css-include-file.css")
+    }],
+    function(win, done) {
+      let div = win.document.querySelector("div");
+      test.assertEqual(
+        div.clientHeight,
+        100,
+        "PageMod contentStyle worked"
+      );
+      test.assertEqual(
+       div.offsetHeight,
+        120,
+        "PageMod contentStyleFile worked"
+      );
+      done();
+    }
+  );
+};
+
+exports.testPageModCssList = function(test) {
+  let [pageMod] = testPageMod(test,
+    'data:text/html;charset=utf-8,<div style="width:320px; max-width: 480px!important">css test</div>', [{
+      include: "data:*",
+      contentStyleFile: [
+        // Highlight evaluation order in this list
+        "data:text/css;charset=utf-8,div { border: 1px solid black; }",
+        "data:text/css;charset=utf-8,div { border: 10px solid black; }",
+        // Highlight evaluation order between contentStylesheet & contentStylesheetFile
+        "data:text/cs;charset=utf-8s,div { height: 1000px; }",
+        // Highlight precedence between the author and user style sheet
+        "data:text/css;charset=utf-8,div { width: 200px; max-width: 640px!important}",
+      ],
+      contentStyle: [
+        "div { height: 10px; }",
+        "div { height: 100px; }"
+      ]
+    }],
+    function(win, done) {
+      let div = win.document.querySelector("div"),
+          style = win.getComputedStyle(div);
+
+      test.assertEqual(
+       div.clientHeight,
+        100,
+        "PageMod contentStyle list works and is evaluated after contentStyleFile"
+      );
+
+      test.assertEqual(
+        div.offsetHeight,
+        120,
+        "PageMod contentStyleFile list works"
+      );
+
+      test.assertEqual(
+        style.width,
+        "320px",
+        "PageMod author/user style sheet precedence works"
+      );
+
+      test.assertEqual(
+        style.maxWidth,
+        "640px",
+        "PageMod author/user style sheet precedence with !important works"
+      );
+
+      done();
+    }
+  );
+};
+
+exports.testPageModCssDestroy = function(test) {
+  let [pageMod] = testPageMod(test,
+    'data:text/html;charset=utf-8,<div style="width:200px">css test</div>', [{
+      include: "data:*",
+      contentStyle: "div { width: 100px!important; }"
+    }],
+
+    function(win, done) {
+      let div = win.document.querySelector("div"),
+          style = win.getComputedStyle(div);
+
+      test.assertEqual(
+        style.width,
+        "100px",
+        "PageMod contentStyle worked"
+      );
+
+      pageMod.destroy();
+      test.assertEqual(
+        style.width,
+        "200px",
+        "PageMod contentStyle is removed after destroy"
+      );
+
+      done();
+
+    }
+  );
+};

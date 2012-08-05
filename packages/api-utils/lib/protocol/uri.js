@@ -6,11 +6,12 @@
 
 'use strict';
 
-const { CoreProtocol } = require('./core');
+const { Class } = require('../heritage');
 const { Protocol: URLProtocol } = require('./url');
-const { CustomURL } = require('./xpcom/uri');
+const { CustomURL } = require('../xpcom/uri');
 
-const ProtocolHandler = CoreProtocol.extend(URLProtocol, {
+const ProtocolHandler = Class({
+  extends: URLProtocol,
   onResolve: function onResolve() {
     throw Error('Missing required `onResolve` property.');
   },
