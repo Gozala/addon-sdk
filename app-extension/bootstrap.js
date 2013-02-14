@@ -19,6 +19,8 @@ const resourceHandler = ioService.getProtocolHandler('resource').
 const systemPrincipal = CC('@mozilla.org/systemprincipal;1', 'nsIPrincipal')();
 const scriptLoader = Cc['@mozilla.org/moz/jssubscript-loader;1'].
                      getService(Ci.mozIJSSubScriptLoader);
+const prefService = Cc['@mozilla.org/preferences-service;1'].
+                        getService(Ci.nsIPrefService);
 
 const REASON = [ 'unknown', 'startup', 'shutdown', 'enable', 'disable',
                  'install', 'uninstall', 'upgrade', 'downgrade' ];
@@ -99,15 +101,26 @@ function startup(data, reasonCode) {
     }, {
       // Relative modules resolve to add-on package lib
       './': prefixURI + name + '/lib/',
-      'toolkit/': 'resource://gre/modules/toolkit/',
-      '': 'resources:///modules/'
+      './tests/': prefixURI + name + '/tests/',
+      '': 'resource://gre/modules/commonjs/'
     });
+
+    let branch = prefService.getBranch('commonjs.path');
+    let overloads = branch.getChildList('', {}).reduce(function (result, name) {
+      result[name.substr(1)] = branch.getCharPref(name);
+      return result;
+    }, {});
 
     // Make version 2 of the manifest
     let manifest = options.manifest;
 
     // Import `cuddlefish.js` module using a Sandbox and bootstrap loader.
-    let cuddlefishURI = prefixURI + options.loader;
+    let cuddlefishPath = 'loader/cuddlefish.js';
+    let cuddlefishURI = 'resource://gre/modules/commonjs/sdk/' + cuddlefishPath;
+    if (overloads['sdk'] || overloads['sdk/'])
+      cuddlefishURI = (overloads['sdk'] || overloads['sdk/']) + cuddlefishPath;
+    else if (overloads[''])
+      cuddlefishURI = overloads[''] + 'sdk/' + cuddlefishPath;
     cuddlefishSandbox = loadSandbox(cuddlefishURI);
     let cuddlefish = cuddlefishSandbox.exports;
 
@@ -157,7 +170,7 @@ function startup(data, reasonCode) {
       }
     });
 
-    let module = cuddlefish.Module('addon-sdk/sdk/loader/cuddlefish', cuddlefishURI);
+    let module = cuddlefish.Module('sdk/loader/cuddlefish', cuddlefishURI);
     let require = cuddlefish.Require(loader, module);
 
     require('sdk/addon/runner').startup(reason, {

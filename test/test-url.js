@@ -86,6 +86,8 @@ exports.testToFilename = function(test) {
     "url.toFilename() on nonexistent resources should throw"
   );
 
+  /*
+  MOVE IT TO AN ADDON TEST
   if (!packed)
     test.assertMatches(url.toFilename(module.uri),
                        /.*test-url\.js$/,
@@ -95,7 +97,8 @@ exports.testToFilename = function(test) {
       function() { url.toFilename(module.uri); },
       "cannot map to filename: "+module.uri,
       "url.toFilename() can fail for packed XPIs");
-
+  */
+  
   test.assertRaises(
     function() { url.toFilename("http://foo.com/"); },
     "cannot map to filename: http://foo.com/",

@@ -8,7 +8,7 @@
 // add-ons will be able to use old require statements.
 // Tests are based on following usage data:
 // https://docs.google.com/spreadsheet/ccc?key=0ApEBy-GRnGxzdHlRMHJ5RXN1aWJ4RGhINkxSd0FCQXc#gid=0
-
+/*
 exports["test compatibility"] = function(assert) {
   assert.equal(require("self"),
                require("sdk/self"), "sdk/self -> self");
@@ -185,3 +185,4 @@ if (require("sdk/system/xul-app").is("Fennec")) {
 }
 
 require("test").run(exports);
+*/

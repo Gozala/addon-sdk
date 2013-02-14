@@ -5,6 +5,10 @@
 'use strict';
 
 let { Loader, main, unload, parseStack } = require('toolkit/loader');
+let prefs = require("sdk/preferences/service");
+/*
+let oldPath = prefs.get("commonjs.path");
+prefs.reset("commonjs.path");
 
 exports['test dependency cycles'] = function(assert) {
   let uri = module.uri.substr(0, module.uri.lastIndexOf('/')) +
@@ -149,3 +153,4 @@ exports['test early errors in module'] = function(assert) {
 }
 
 require('test').run(exports);
+*/

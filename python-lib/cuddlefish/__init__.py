@@ -161,6 +161,14 @@ parser_groups = (
                                 default="firefox",
                                 cmds=['test', 'run', 'testex', 'testpkgs',
                                       'testall'])),
+        (("-m", "--local-modules",), dict(dest="use_local_modules",
+                                     help=("Overload JS modules integrated into"
+                                           " Firefox with the one given in your"
+                                           " SDK repository"),
+                                     action="store_true",
+                                     default=False,
+                                     cmds=['run', 'test', 'testpkgs',
+                                           'testall', 'xpi'])),
         (("", "--no-run",), dict(dest="no_run",
                                      help=("Instead of launching the "
                                            "application, just show the command "
@@ -769,7 +777,7 @@ def run(arguments=sys.argv[1:], target_cfg=None, pkg_cfg=None,
         # This should be contained in the test runner package.
         # maybe just do: target_cfg.main = 'test-harness/run-tests'
         harness_options['main'] = 'sdk/test/runner'
-        harness_options['mainPath'] = manifest.get_manifest_entry("addon-sdk", "lib", "sdk/test/runner").get_path()
+        harness_options['mainPath'] = 'sdk/test/runner'
     else:
         harness_options['main'] = target_cfg.get('main')
         harness_options['mainPath'] = manifest.top_path
@@ -870,7 +878,10 @@ def run(arguments=sys.argv[1:], target_cfg=None, pkg_cfg=None,
                              norun=options.no_run,
                              used_files=used_files,
                              enable_mobile=options.enable_mobile,
-                             mobile_app_name=options.mobile_app_name)
+                             mobile_app_name=options.mobile_app_name,
+                             env_root=env_root,
+                             is_running_tests=(command == "test"),
+                             use_local_modules=options.use_local_modules)
         except ValueError, e:
             print ""
             print "A given cfx option has an inappropriate value:"

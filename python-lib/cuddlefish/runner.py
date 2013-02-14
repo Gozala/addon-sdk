@@ -380,7 +380,10 @@ def run_app(harness_root_dir, manifest_rdf, harness_options,
             logfile=None, addons=None, args=None, extra_environment={},
             norun=None,
             used_files=None, enable_mobile=False,
-            mobile_app_name=None):
+            mobile_app_name=None,
+            env_root=None,
+            is_running_tests=False,
+            use_local_modules=False):
     if binary:
         binary = os.path.expanduser(binary)
 
@@ -391,6 +394,16 @@ def run_app(harness_root_dir, manifest_rdf, harness_options,
 
     cmdargs = []
     preferences = dict(DEFAULT_COMMON_PREFS)
+
+    # Overload global commonjs path with lib/ folder
+    if use_local_modules:
+        preferences["commonjs.path"] = "file://" + \
+            os.path.join(env_root, "lib").replace("\\", "/") + "/"
+
+    # Overload tests/ mapping with test/ folder, only when running test
+    if is_running_tests:
+        preferences["commonjs.path.tests"] = "file://" + \
+            os.path.join(env_root, "test").replace("\\", "/") + "/"
 
     # For now, only allow running on Mobile with --force-mobile argument
     if app_type in ["fennec", "fennec-on-device"] and not enable_mobile:
