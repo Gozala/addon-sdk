@@ -6,14 +6,20 @@
 
 let { Loader, main, unload, parseStack } = require('toolkit/loader');
 let prefs = require("sdk/preferences/service");
-/*
-let oldPath = prefs.get("commonjs.path");
-prefs.reset("commonjs.path");
 
-exports['test dependency cycles'] = function(assert) {
-  let uri = module.uri.substr(0, module.uri.lastIndexOf('/')) +
-            '/fixtures/loader/cycles/'
+let root = module.uri.substr(0, module.uri.lastIndexOf('/'))
 
+function test(fn) {
+  return function(assert) {
+    let path = prefs.get("commonjs.path");
+    prefs.reset("commonjs.path");
+    fn(assert);
+    prefs.set("commonjs.path", path);
+  }
+}
+
+exports['test dependency cycles'] = test(function(assert) {
+  let uri = root + '/fixtures/loader/cycles/';
   let loader = Loader({ paths: { '': uri } });
 
   let program = main(loader, 'main');
@@ -23,12 +29,10 @@ exports['test dependency cycles'] = function(assert) {
   assert.equal(program.c.main, program, 'module `c` gets correct `main`');
 
   unload(loader);
-};
+});
 
-exports['test syntax errors'] = function(assert) {
-  let uri = module.uri.substr(0, module.uri.lastIndexOf('/')) +
-            '/fixtures/loader/syntax-error/';
-
+exports['test syntax errors'] = test(function(assert) {
+  let uri = root + '/fixtures/loader/syntax-error/';
   let loader = Loader({ paths: { '': uri } });
 
   try {
@@ -47,12 +51,10 @@ exports['test syntax errors'] = function(assert) {
   } finally {
     unload(loader);
   }
-};
+});
 
-exports['test missing module'] = function(assert) {
-  let uri = module.uri.substr(0, module.uri.lastIndexOf('/')) +
-            '/fixtures/loader/missing/'
-
+exports['test missing module'] = test(function(assert) {
+  let uri = root + '/fixtures/loader/missing/'
   let loader = Loader({ paths: { '': uri } });
 
   try {
@@ -76,11 +78,10 @@ exports['test missing module'] = function(assert) {
   } finally {
     unload(loader);
   }
-}
+});
 
-exports['test exceptions in modules'] = function(assert) {
-  let uri = module.uri.substr(0, module.uri.lastIndexOf('/')) +
-            '/fixtures/loader/exceptions/'
+exports['test exceptions in modules'] = test(function(assert) {
+  let uri = root + '/fixtures/loader/exceptions/'
 
   let loader = Loader({ paths: { '': uri } });
 
@@ -113,12 +114,10 @@ exports['test exceptions in modules'] = function(assert) {
   } finally {
     unload(loader);
   }
-}
+});
 
-exports['test early errors in module'] = function(assert) {
-  let uri = module.uri.substr(0, module.uri.lastIndexOf('/')) +
-            '/fixtures/loader/errors/'
-
+exports['test early errors in module'] = test(function(assert) {
+  let uri = root + '/fixtures/loader/errors/';
   let loader = Loader({ paths: { '': uri } });
 
   try {
@@ -150,7 +149,6 @@ exports['test early errors in module'] = function(assert) {
   } finally {
     unload(loader);
   }
-}
+});
 
 require('test').run(exports);
-*/

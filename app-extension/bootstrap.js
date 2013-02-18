@@ -101,8 +101,7 @@ function startup(data, reasonCode) {
     }, {
       // Relative modules resolve to add-on package lib
       './': prefixURI + name + '/lib/',
-      './tests/': prefixURI + name + '/tests/',
-      '': 'resource://gre/modules/commonjs/'
+      './tests/': prefixURI + name + '/tests/'
     });
 
     let branch = prefService.getBranch('commonjs.path');
