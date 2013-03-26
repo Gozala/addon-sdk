@@ -9,7 +9,7 @@ const { open, getMostRecentBrowserWindow, getOuterId } = require("sdk/window/uti
 
 exports["test browser events"] = function(assert, done) {
   let loader = Loader(module);
-  let { events } = loader.require("sdk/window/events");
+  let { events } = loader.require("sdk/browser/events");
   let { on, off } = loader.require("sdk/event/core");
   let actual = [];
 
@@ -17,9 +17,9 @@ exports["test browser events"] = function(assert, done) {
     actual.push(e);
     if (e.type === "load") window.close();
     if (e.type === "close") {
-      let [ open, ready, load, close ] = actual;
-      assert.equal(open.type, "open")
-      assert.equal(open.target, window, "window is open")
+      // Unload the module so that all listeners set by observer are removed.
+
+      let [ ready, load, close ] = actual;
 
       assert.equal(ready.type, "DOMContentLoaded")
       assert.equal(ready.target, window, "window ready")
@@ -41,6 +41,34 @@ exports["test browser events"] = function(assert, done) {
 
   // Open window and close it to trigger observers.
   let window = open();
+};
+
+exports["test browser events ignore other wins"] = function(assert, done) {
+  let loader = Loader(module);
+  let { events: windowEvents } = loader.require("sdk/window/events");
+  let { events: browserEvents } = loader.require("sdk/browser/events");
+  let { on, off } = loader.require("sdk/event/core");
+  let actual = [];
+
+  function browserEventHandler(e) actual.push(e)
+  on(browserEvents, "data", browserEventHandler)
+  on(windowEvents, "data", function handler(e) {
+    if (e.type === "load") window.close();
+    if (e.type === "close") {
+      assert.deepEqual(actual, [], "browser events were not triggered");
+
+      // Note: If window is closed right after this GC won't have time
+      // to claim loader and there for this listener, there for it's safer
+      // to remove listener.
+      off(windowEvents, "data", handler);
+      off(browserEvents, "data", browserEventHandler);
+      loader.unload();
+      done();
+    }
+  });
+
+  // Open window and close it to trigger observers.
+  let window = open("data:text/html,not a browser");
 };
 
 if (require("sdk/system/xul-app").is("Fennec")) {
