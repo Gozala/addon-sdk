@@ -31,8 +31,8 @@ exports["test browser events"] = function(assert, done) {
       assert.equal(close.target, window, "window load")
 
       // Note: If window is closed right after this GC won't have time
-      // to claim loader and there for this listener, there for it's safer
-      // to remove listener.
+      // to claim loader and there for this listener. It's better to remove
+      // remove listener here to avoid race conditions.
       off(events, "data", handler);
       loader.unload();
       done();
