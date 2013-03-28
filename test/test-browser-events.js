@@ -48,14 +48,32 @@ exports["test browser events ignore other wins"] = function(assert, done) {
   let { events: windowEvents } = loader.require("sdk/window/events");
   let { events: browserEvents } = loader.require("sdk/browser/events");
   let { on, off } = loader.require("sdk/event/core");
-  let actual = [];
+  let actualBrowser = [];
+  let actualWindow = [];
 
-  function browserEventHandler(e) actual.push(e)
+  function browserEventHandler(e) actualBrowser.push(e)
   on(browserEvents, "data", browserEventHandler)
   on(windowEvents, "data", function handler(e) {
+    actualWindow.push(e)
     if (e.type === "load") window.close();
     if (e.type === "close") {
-      assert.deepEqual(actual, [], "browser events were not triggered");
+      assert.deepEqual(actualBrowser, [], "browser events were not triggered");
+      let [ open, ready, load, close ] = actualWindow;
+
+      assert.equal(open.type, "open")
+      assert.equal(open.target, window, "window is open")
+
+
+
+      assert.equal(ready.type, "DOMContentLoaded")
+      assert.equal(ready.target, window, "window ready")
+
+      assert.equal(load.type, "load")
+      assert.equal(load.target, window, "window load")
+
+      assert.equal(close.type, "close")
+      assert.equal(close.target, window, "window load")
+
 
       // Note: If window is closed right after this GC won't have time
       // to claim loader and there for this listener, there for it's safer
